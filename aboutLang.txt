@@ -1,0 +1,35 @@
+Example:
+    var x: String = "Hello World!"; // String
+    print(x)
+
+    var y: Number = 5; // Int
+    print(y);
+
+    Future:
+
+    function PrintCustom(message): {
+        print(message);
+
+        return(message);
+    }
+
+    class People {
+        var name;
+        var age;
+
+        function new(Name, Age) {
+            this.name = Name;
+            this.age = Age;
+        }
+    }
+
+    Object people = new(People, "Isaque", 16);
+
+    PrintCustom(people.name)
+
+
+Types:
+    Number
+    String
+    Array
+    Object (from class)
