@@ -2,6 +2,7 @@
 #define LEXER_H
 
 #include "../libs/list/list.h"
+#include <stdbool.h>
 
 typedef enum {
     var_definition,
@@ -58,6 +59,8 @@ typedef struct {
     Lex the line and return a list with lexed tokens.
     @param line: The line to be lexed.
 */
+
+bool lexer_is_number(char* str);
 List* lexer_prelex_line(char* line);
 List* lexer_define_tokens(List* prelexed_tokens);
 List* lexer_lex_line(char* line);

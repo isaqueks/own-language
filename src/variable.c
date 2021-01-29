@@ -65,15 +65,21 @@ variable_t* variable_create_from(char* name, variable_t* other) {
 void variable_free_value(variable_t* var) {
 
     var->value_length = 0;
+    if (var->value_pointer != NULL)
+    free(var->value_pointer);
 
-    if (!var->is_pointer) {
-        free(var->value_pointer);
-        var->value_pointer = NULL;
-    }
-    else {
-        // Clean the REAL value address
-        variable_free_value((variable_t*)var->value_pointer);
-    }
+    // * No need to clean the real value.
+    // * The real value will be cleaned
+    // * when variable_free_value would
+    // * be called for origin variable.
+    // if (!var->is_pointer) {
+    //     free(var->value_pointer);
+    //     var->value_pointer = NULL;
+    // }
+    // else {
+    //     // Clean the REAL value address
+    //     variable_free_value((variable_t*)var->value_pointer);
+    // }
     // If not, there's no allocated memory for the pointer variable.
     // The value_pointer itself is already 4 bytes size;
 }
@@ -87,10 +93,16 @@ void variable_assign(variable_t* var, void* value, uint32_t value_length) {
 
     var->value_length = value_length;
 
-    if (var->is_pointer)
-        variable_assign((variable_t*)var->value_pointer, value, value_length);
-    else
-        var->value_pointer = value;
+    // ! If it's a pointer, 
+    // if (var->is_pointer)
+    //     variable_assign((variable_t*)var->value_pointer, value, value_length);
+    // else
+    //     var->value_pointer = value;
+
+    // Break pointer and assign a value.
+    // For assigning as pointer, use variable_assign_as_pointer
+    var->value_pointer = value;
+    var->is_pointer = false;
 }
 
 void variable_assign_as_pointer(variable_t* var, variable_t* other) {
@@ -111,4 +123,14 @@ void* variable_get_value(variable_t* var) {
         return variable_get_value((variable_t*)var->value_pointer);
 
     return var->value_pointer;
+}
+
+void variable_free_props(variable_t* var) {
+    free(var->name);
+    variable_free_value(var);
+}
+
+void variable_free(variable_t* var) {
+    variable_free_props(var);
+    free(var);
 }

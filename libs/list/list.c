@@ -47,3 +47,8 @@ void list_set(List* list, int index, void* value) {
     void* ptr = list_get(list, index);
     memcpy(ptr, value, list->objectSize);
 }
+
+void list_free(List* list) {
+    free(list->objArray);
+    free(list);
+}

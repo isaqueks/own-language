@@ -24,7 +24,6 @@ typedef struct {
     uint32_t value_length;      
 } variable_t;
 
-
 /*
     Default variable constructor.
     @param name: The name for the new variable
@@ -79,5 +78,9 @@ void variable_assign_as_pointer(variable_t* var, variable_t* other);
     @param var: The variable_t*
 */
 void* variable_get_value(variable_t* var);
+
+void variable_free_props(variable_t* var);
+
+void variable_free(variable_t* var);
 
 #endif

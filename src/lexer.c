@@ -47,11 +47,27 @@ extern char *token_type_str[] = {
     ! value_assignment {=}, string_literal {Hello World}
 */
 
-char Symbols[] = "=:.,()[]";
+char Symbols[] = "=:.,()[]+-*/";
 token_type_t SymbolTypes[] = {value_assignment, var_type_def_symbol, dot, comma, open_parenthesis,
-    close_parenthesis, array_begining, array_end};
+    close_parenthesis, array_begining, array_end,
+
+    operation_sum,
+    operation_sub,
+    operation_mul,
+    operation_div
+};
 
 char* legal_name_start = "$_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+bool lexer_is_number(char* str) {
+    char* start = str;
+    while(*str) {
+        if (!isdigit(*str) && !(*str == '.' && (str-start)>0))
+            return false;
+        *str++;
+    }
+    return true;
+}
 
 List *lexer_prelex_line(char *line)
 {
@@ -72,6 +88,11 @@ List *lexer_prelex_line(char *line)
         char ch = line[index];
 
         int symbolIndex = (index < length && ch != 0) ? strchr(Symbols, ch) : NULL;
+        if (ch == '.' && symbolIndex != NULL) {
+            currentToken[currentTokenIndex] = 0;
+            if (lexer_is_number(currentToken))
+            symbolIndex = NULL;
+        }
 
         if (!insideString && ((currentTokenIndex == 0 && symbolIndex != NULL))) {
             addNext = true;
@@ -116,15 +137,7 @@ List *lexer_prelex_line(char *line)
                     token.type = string_literal;
                 else if (isdigit(currentToken[0]))
                 {
-                    bool isnum = true;
-                    for (int j = 1; j < currentTokenIndex - 1; j++)
-                    {
-                        if (!isdigit(currentToken[j]))
-                        {
-                            isnum = false;
-                            break;
-                        }
-                    }
+                    bool isnum = lexer_is_number(currentToken);
                     if (isnum)
                         token.type = number;
                 }
