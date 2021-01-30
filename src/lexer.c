@@ -33,8 +33,11 @@ extern char *token_type_str[] = {
     "function_call",
     "comma",
     "dot",
+    "semicolon",
     "open_parenthesis",
     "close_parenthesis",
+    "open_bracket",
+    "close_bracket",
     "UNKNOWN"
     
 };
@@ -47,14 +50,19 @@ extern char *token_type_str[] = {
     ! value_assignment {=}, string_literal {Hello World}
 */
 
-char Symbols[] = "=:.,()[]+-*/";
+char Symbols[] = "=:.,()[]+-*/{};";
 token_type_t SymbolTypes[] = {value_assignment, var_type_def_symbol, dot, comma, open_parenthesis,
     close_parenthesis, array_begining, array_end,
 
     operation_sum,
     operation_sub,
     operation_mul,
-    operation_div
+    operation_div,
+
+    open_bracket,
+    close_bracket,
+
+    semicolon
 };
 
 char* legal_name_start = "$_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -214,6 +222,17 @@ List *lexer_define_tokens(List *prelexed_tokens)
             else
             {
                 ERR(SYNTAX_ERROR, "Type expected!");
+            }
+        }
+
+        else if (token->type == UNKNOWN && strcmp(token->token, "function") == 0)
+        {
+            token->type = function_definition;
+            // Next token should be a function name
+            NEXT_TOKEN();
+            if (token->type == UNKNOWN)
+            {
+                token->type = function_name_definition;
             }
         }
         

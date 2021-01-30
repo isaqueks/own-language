@@ -8,15 +8,26 @@
 #include "variable.h"
 #include "function.h"
 
+typedef enum
+{
+    no_pending_task,
+    func_creation_awaiting_opening_bracket,
+    func_creation_awaiting_end,
+} parser_state_task_t;
 
-void parser_parse(char* line, context_t* context);
-void parser_parse_tokens(List* tokens, context_t* context);
-void parser_function_invoke(function_t* function, context_t* context);
+typedef struct {
+    parser_state_task_t current_task;
+    void* memory;
+} parser_state_t;
 
-int parser_eval_expr_until_tokens(List* tokens, context_t* context,
+void parser_parse(List* state, char* line, context_t* context);
+void parser_parse_tokens(List* state, List* tokens, context_t* context);
+void parser_function_invoke(List* state, function_t* function, context_t* context);
+
+int parser_eval_expr_until_tokens(List* state, List* tokens, context_t* context,
     variable_type_t type, int i, token_type_t limits[], int limitscount, void** out, int* size);
 
-int parser_eval_expr(List* tokens, context_t* context,
+int parser_eval_expr(List* state, List* tokens, context_t* context,
     variable_type_t type, int i, void** out, int* size);
 
 #endif

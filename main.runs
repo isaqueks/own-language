@@ -1,0 +1,7 @@
+function PrintCustom(a: String, b: String, c: String) {
+	print("'a' is " + a);
+	print("'b' is " + b);
+	print("'c' is " + c);
+}
+
+PrintCustom("Hello", "World", "Test2");

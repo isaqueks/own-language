@@ -66,7 +66,8 @@ void variable_free_value(variable_t* var) {
 
     var->value_length = 0;
     if (var->value_pointer != NULL)
-    free(var->value_pointer);
+        free(var->value_pointer);
+    var->value_pointer = NULL;
 
     // * No need to clean the real value.
     // * The real value will be cleaned

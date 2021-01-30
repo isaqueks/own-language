@@ -10,34 +10,6 @@
 #include "src/parser.h"
 #include "src/function.h"
 
-void testVariables() {
-
-    context_t* window = context_create(NULL);
-    context_t* child = context_create(window);
-
-    char* hellow = "Hello World";
-    char* test = "This is a test";
-    {
-
-        variable_t* string1 = variable_create("string1", String, hellow, strlen(hellow)+1);
-        variable_t* ref = variable_create_pointer_from("ref", string1);
-
-        context_add_variable(window, string1);
-        context_add_variable(child, ref);
-
-    }
-    variable_t* v1 = context_search_variable(window, "string1");
-    variable_t* v2 = context_search_variable(window, "ref");
-
-    printf("v1: %s\nv2: %s\n", variable_get_value(v1), variable_get_value(v2));
-
-    variable_free_value(v2);
-    variable_assign(v2, test, strlen(test)+1);
-
-    printf("v1: %s\nv2: %s\n", variable_get_value(v1), variable_get_value(v2));
-
-}
-
 void print_internal(void* ctxptr) {
     context_t* ctx = (context_t*)ctxptr;
     variable_t* arg_str = context_search_variable(ctx, "str");
@@ -48,8 +20,6 @@ void print_internal(void* ctxptr) {
 int main(int argc, char const *argv[])
 {
 
-    // testVariables();
-    // return 0;
     context_t* main = context_create(NULL);
 
     {
@@ -61,41 +31,37 @@ int main(int argc, char const *argv[])
         context_add_function(main, print_func);
     }
 
-    function_t* fp = context_search_function(main, "print");
-    printf("fname: %s\n", fp->name);
+    List* parser_state = create_list(sizeof(parser_state_t), 16);
 
+    if (argc == 2) {
+        FILE * fp;
+        char * line = NULL;
+        size_t len = 0;
+        size_t read;
+        printf("File >> %s\n", argv[1]);
+        fp = fopen(argv[1], "r");
+        if (fp == NULL)
+            exit(EXIT_FAILURE);
 
+        while ((read = getline(&line, &len, fp)) != -1) {
+            parser_parse(parser_state, line, main);
+        }
+
+        fclose(fp);
+        if (line)
+            free(line);
+    }
+    else // If not a file, open the interactive terminal
     while (1) {
         printf(" >> ");
 
-        char line[1024];
+        char line[512];
         gets(line);
-        if (strcmp(line, "print") == 0)
+        if (strcmp(line, "exit") == 0)
             break;
 
-        parser_parse(line, main);
+        parser_parse(parser_state, line, main);
     }
-
-    char varname[1024];
-    printf(" Variable name: ");
-    gets(varname);
-
-    variable_t* x = context_search_variable(main, varname);
-    if (x->type == String)
-        printf("%s = %s\n", varname, variable_get_value(x));
-    else if (x->type == Number)
-        printf("%s = %f\n", varname, (double)(*(double*)variable_get_value(x)));
-
-    // List* result = lexer_lex_line(line);
-    // if (result == NULL) {
-    //     Throw("Unable to continue.");
-    // }
-
-
-    // for(int i = 0; i < result->usedLength; i++) {
-    //     token_t* token = list_get(result, i);
-    //     printf("TOKEN: !%s!\t\"%s\"\n", token->token, token_type_str[token->type]);
-    // }
 
     return 0;
 }

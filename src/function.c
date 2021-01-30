@@ -1,15 +1,23 @@
 #include "function.h"
+#include "lexer.h"
 #include "../libs/list/list.h"
 #include "variable.h"
 #include <string.h>
 #include "exceptions.h"
 
-function_t* function_create(char* name, List* arg_models, int linesOfCode, char* code) {
+function_t* function_create_empty(char* name, List* arg_models) {
+        function_t* func = malloc(sizeof(function_t));
+    func->name = name;
+    func->arg_models = arg_models;
+    func->tokens = create_list(sizeof(token_t), 32);
+    func->native_function = NULL;
+}
+
+function_t* function_create(char* name, List* arg_models, List* tokens) {
     function_t* func = malloc(sizeof(function_t));
     func->name = name;
     func->arg_models = arg_models;
-    func->inner_code_lines = linesOfCode;
-    func->inner_code = code;
+    func->tokens = tokens;
     func->native_function = NULL;
 }
 
@@ -19,28 +27,26 @@ native_function_handle_t native_handle) {
     function_t* func = malloc(sizeof(function_t));
     func->name = name;
     func->arg_models = arg_models;
-    func->inner_code = NULL;
-    func->inner_code_lines = 0;
     func->native_function = native_handle;
+    func->tokens = NULL;
 
 }
 
-function_t* function_add_code_line(function_t* fn, char* line) {
-    if (fn->inner_code == NULL)
-        fn->inner_code = malloc(strlen(line)+2);
-    else
-        fn->inner_code = realloc(fn->inner_code, strlen(fn->inner_code)+2);
-    
-    strcat(fn->inner_code, line);
-    strcat(fn->inner_code, "\n");
+function_t* function_add_code(function_t* fn, List* tokens) {
+    for (int i = 0; i < tokens->usedLength; i++) {
+        list_add(fn->tokens, list_get(tokens, i));
+    }
+    return fn;
+}
 
-    fn->inner_code_lines++;
+function_t* function_add_token(function_t* fn, token_t* token) {
+    list_add(fn->tokens, token);
     return fn;
 }
 
 variable_t* function_get_arg(function_t* fn, char* argname) {
     for (int i = 0; i < fn->arg_models->usedLength; i++) {
-        variable_t* arg = list_get(fn->arg_models, i);
+        variable_t* arg = *((variable_t**)list_get(fn->arg_models, i));
         if (strcmp(arg->name, argname) == 0)
             return arg;
     }

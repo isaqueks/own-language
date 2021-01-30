@@ -42,9 +42,13 @@ typedef enum {
     // Symbols
     comma,
     dot,
+    semicolon,
 
     open_parenthesis,
     close_parenthesis,
+
+    open_bracket,
+    close_bracket,
 
     UNKNOWN
 
