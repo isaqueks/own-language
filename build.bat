@@ -1,1 +1,1 @@
-gcc -g main.c libs/list/list.c src/variable.c src/lexer.c src/parser.c src/function.c src/primtypes.c src/context.c -o main.exe
+gcc -g main.c libs/list/list.c src/variable.c src/lexer.c src/parser.c src/function.c src/primtypes.c src/context.c built_in_lib/io.c -o main.exe

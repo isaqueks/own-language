@@ -10,26 +10,14 @@
 #include "src/parser.h"
 #include "src/function.h"
 
-void print_internal(void* ctxptr) {
-    context_t* ctx = (context_t*)ctxptr;
-    variable_t* arg_str = context_search_variable(ctx, "str");
-
-    printf("%s\n", (char*)variable_get_value(arg_str));
-}
+#include "built_in_lib/io.h"
 
 int main(int argc, char const *argv[])
 {
 
     context_t* main = context_create(NULL);
 
-    {
-        variable_t* arg_str = variable_create("str", String, NULL, 0);
-        native_function_handle_t printhandle = print_internal;
-        List* args = create_list(sizeof(variable_t*), 1);
-        list_add(args, &arg_str);
-        function_t* print_func = function_create_native("print", args, printhandle);
-        context_add_function(main, print_func);
-    }
+    lib_install(main);
 
     List* parser_state = create_list(sizeof(parser_state_t), 16);
 

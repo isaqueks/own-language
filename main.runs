@@ -1,7 +1,8 @@
-function PrintCustom(a: String, b: String, c: String) {
-	print("'a' is " + a);
-	print("'b' is " + b);
-	print("'c' is " + c);
-}
-
-PrintCustom("Hello", "World", "Test2");
+var x: Any = "hello world"
+var y: String = x
+var z: Any = x
+var a: Number = z
+print(x)
+print(y)
+print(z)
+print(a)

@@ -35,7 +35,7 @@
     }
 
 int parser_eval_expr_until_tokens(List* state, List *tokens, context_t *context,
-                                  variable_type_t type, int i, token_type_t limits[], int limitscount, void **out, int *size)
+                                  variable_type_t type, int i, token_type_t limits[], int limitscount, void **out, int *size, variable_type_t* out_type)
 {
     bool isString = false;
 
@@ -120,11 +120,16 @@ int parser_eval_expr_until_tokens(List* state, List *tokens, context_t *context,
                 value_is_string_representation = false;
         }
 
-        if (token_type_as_var_type != type)
+        if (token_type_as_var_type != type && type != Any && token_type_as_var_type != Any) {
+            printf("%d %d", type, token_type_as_var_type);
             ERR(TYPE_ERROR, "Type conflict.");
+        }
 
         if (output == NULL)
         {
+            if (type == Any) {
+                type = token_type_as_var_type;
+            }
             switch (type)
             {
             case Number:
@@ -240,16 +245,17 @@ int parser_eval_expr_until_tokens(List* state, List *tokens, context_t *context,
         }
     }
 
+    *out_type = type;
     *size = outSize;
     *out = output;
     return i;
 #undef STR2NUM
 }
 
-int parser_eval_expr(List* state, List *tokens, context_t *context, variable_type_t type, int i, void **out, int *size)
+int parser_eval_expr(List* state, List *tokens, context_t *context, variable_type_t type, int i, void **out, int *size, variable_type_t* out_type)
 {
     token_type_t limits[] = {UNKNOWN};
-    return parser_eval_expr_until_tokens(state, tokens, context, type, i, limits, 1, out, size);
+    return parser_eval_expr_until_tokens(state, tokens, context, type, i, limits, 1, out, size, out_type);
 }
 
 void parser_parse(List* state, char *line, context_t *context)
@@ -296,7 +302,11 @@ int parser_internal_assign_variable(List* state, List *tokens, context_t *contex
     char *valuemem;
     int size;
 
-    i = parser_eval_expr(state, tokens, context, var->type, i, &valuemem, &size);
+    variable_type_t outtype;
+    i = parser_eval_expr(state, tokens, context, var->type, i, &valuemem, &size, &outtype);
+    if (var->type == Any) {
+        var->type = outtype;
+    }
 
     if (var->value_pointer != NULL)
         variable_free_value(var);
@@ -398,11 +408,12 @@ int parser_call_function(List* state, List *tokens, context_t *context, int i)
         char *vname = malloc(strlen(model->name) + 1);
         strcpy(vname, model->name);
 
+        variable_type_t expr_type;
         token_type_t toks[] = {comma, close_parenthesis};
         i = parser_eval_expr_until_tokens(state, tokens, context, model->type, i,
-                                          toks, 2, &value, &value_size);
+                                          toks, 2, &value, &value_size, &expr_type);
 
-        variable_t *arg = variable_create(vname, model->type, value, value_size);
+        variable_t *arg = variable_create(vname, expr_type, value, value_size);
         context_add_variable(function_scope, arg);
     }
 
