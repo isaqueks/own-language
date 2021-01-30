@@ -10,7 +10,7 @@
 #include "src/parser.h"
 #include "src/function.h"
 
-#include "built_in_lib/io.h"
+#include "built_in_lib/defaultlib.h"
 
 int main(int argc, char const *argv[])
 {
