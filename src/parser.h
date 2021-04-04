@@ -13,10 +13,14 @@ typedef enum
     no_pending_task,
     func_creation_awaiting_opening_bracket,
     func_creation_awaiting_end,
+
+    conditional_awaiting_opening_bracket,
+    conditional_awaiting_end,
 } parser_state_task_t;
 
 typedef struct {
-    parser_state_task_t current_task;
+    parser_state_task_t task;
+    double flag;
     void* memory;
 } parser_state_t;
 

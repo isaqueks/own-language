@@ -59,4 +59,12 @@ void function_free(function_t* fn) {
         variable_free(*((variable_t**)list_get(fn->arg_models, i)));
     }
     list_free(fn->arg_models);
+    if (fn->tokens != NULL) {
+        for (int i = 0; i < fn->tokens->usedLength; i++) {
+            token_t* tok = ((token_t*)list_get(fn->tokens, i));
+            free(tok->token);
+        }
+        list_free(fn->tokens);
+    }
+   free(fn);
 }

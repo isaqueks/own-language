@@ -9,6 +9,7 @@
 #include "context.h"
 #include "variable.h"
 #include "primtypes.h"
+#include "conditional.h"
 
 
 #define NEXT_TOKEN()                                   \
@@ -18,8 +19,8 @@
         token = list_get(tokens, ++i);                 \
     }
 
-#define BREAK_IF_SEMICOLON()      \
-    if (token->type == semicolon) \
+#define BREAK_IF_LINE_END()      \
+    if (token->type == line_end) \
         break;
 
 #define GET_PREV_TOKEN() ((token_t *)list_get(tokens, i - 1))
@@ -48,7 +49,7 @@ int parser_eval_expr_until_tokens(List* state, List *tokens, context_t *context,
     for (; i < tokens->usedLength; i++)
     {
         token_t *token = list_get(tokens, i);
-        BREAK_IF_SEMICOLON();
+        BREAK_IF_LINE_END();
 
         bool brk = false;
         for (int j = 0; j < limitscount; j++)
@@ -262,14 +263,6 @@ void parser_parse(List* state, char *line, context_t *context)
 {
     List *tokenList = lexer_lex_line(line);
 
-    // * Token debug -- Not needed anymore
-    // for (int i = 0; i < tokenList->usedLength; i++)
-    // {
-    //     token_t *token = list_get(tokenList, i);
-    //     printf(" [\"%s\":%s]\n", token->token, token_type_str[token->type]);
-    // }
-    // printf("\n");
-
     parser_parse_tokens(state, tokenList, context);
 
     for (int i = 0; i < tokenList->usedLength; i++)
@@ -341,20 +334,10 @@ int parser_internal_create_variable(List* state, List *tokens, context_t *contex
     variable_t *var = variable_create(varname, vartype, NULL, 0);
     context_add_variable(context, var);
 
-    // TODO: Implement Array: T (var x: Array: String = ["Hello", "World"])
-    // if (vartype == Array) {
-    //     if (GET_NEXT_TOKEN()->type == var_type_def_symbol) {
-
-    //     }
-    //     else {
-    //         ERR(SYNTAX_ERROR, "Type expected. Array must have a sub-type! Use Array: T.");
-    //     }
-    // }
 
     if (GET_NEXT_TOKEN()->type == value_assignment)
         i = parser_internal_assign_variable(state, tokens, context, i, varname);
 
-    // TODO: Implement other types
     return i;
 }
 
@@ -395,7 +378,7 @@ int parser_call_function(List* state, List *tokens, context_t *context, int i)
     {
 
         token = list_get(tokens, i);
-        BREAK_IF_SEMICOLON();
+        BREAK_IF_LINE_END();
 
         if (token->type == close_parenthesis)
             break;
@@ -428,8 +411,8 @@ int parser_create_function(List* state, List *tokens, context_t *context, int i)
 {
     parser_state_t* currState = GET_TOP_STATE();
     bool executing_by_state = currState != NULL &&
-    (currState->current_task == func_creation_awaiting_end
-    || currState->current_task == func_creation_awaiting_opening_bracket);
+    (currState->task == func_creation_awaiting_end
+    || currState->task == func_creation_awaiting_opening_bracket);
 
     token_t *token = list_get(tokens, i);
 
@@ -437,14 +420,17 @@ int parser_create_function(List* state, List *tokens, context_t *context, int i)
     bool f_end_reached = false;
     bool f_begining_reached = false;
 
+    int opened_brackets = 0; // Should be 0 to close function
+
     function_t *func;
 
     if (executing_by_state) {
         func = (function_t*)currState->memory;
-        if (currState->current_task == func_creation_awaiting_opening_bracket) {
+        opened_brackets = currState->flag;
+        if (currState->task == func_creation_awaiting_opening_bracket) {
 
         }
-        else if (currState->current_task == func_creation_awaiting_end) {
+        else if (currState->task == func_creation_awaiting_end) {
             listening_code = true;
             f_begining_reached = true;
         }
@@ -529,23 +515,23 @@ int parser_create_function(List* state, List *tokens, context_t *context, int i)
     while (i < tokens->usedLength)
     {
         token = list_get(tokens, i++);
-        if (token->type == open_bracket)
+        if (token->type == open_bracket && opened_brackets++ == 0)
         {
             listening_code = true;
             f_begining_reached = true;
 
-            if (executing_by_state && currState->current_task
+            if (executing_by_state && currState->task
              == func_creation_awaiting_opening_bracket) {
                 list_remove_at(state, state->usedLength-1);
             }
 
             continue;
         }
-        else if (token->type == close_bracket)
+        else if (token->type == close_bracket && --opened_brackets == 0)
         {
             listening_code = false;
             f_end_reached = true;
-            if (executing_by_state && currState->current_task
+            if (executing_by_state && currState->task
              == func_creation_awaiting_end) {
                 list_remove_at(state, state->usedLength-1);
             }
@@ -562,25 +548,89 @@ int parser_create_function(List* state, List *tokens, context_t *context, int i)
     }
 
     if (!f_begining_reached && (!executing_by_state ||
-    currState->current_task
+    currState->task
     !=  func_creation_awaiting_opening_bracket)) {
         parser_state_t pstate;
-        pstate.current_task = func_creation_awaiting_opening_bracket;
+        pstate.task = func_creation_awaiting_opening_bracket;
         pstate.memory = func;
+        pstate.flag = opened_brackets;
         list_add(state, &pstate);
     }
     else if (!f_end_reached && (!executing_by_state ||
-    currState->current_task
+    currState->task
     != func_creation_awaiting_end)) {
         parser_state_t pstate;
-        pstate.current_task = func_creation_awaiting_end;
+        pstate.task = func_creation_awaiting_end;
         pstate.memory = func;
+        pstate.flag = opened_brackets;
         list_add(state, &pstate);
     }
 
     if (!executing_by_state)
-    context_add_function(context, func);
+        context_add_function(context, func);
+    else
+        currState->flag = opened_brackets;
+    
     return i;
+}
+
+int parser_create_if_conditional(List* state, List* tokens, context_t* context, int i) {
+    token_t* token = (token_t*)list_get(tokens, i);
+    if (token->type != if_keyword) {
+        ERR(SYNTAX_ERROR, "if expected!");
+    }
+
+    conditional_statement_t* statement = conditional_statement_create(If);
+    NEXT_TOKEN();
+
+    if (token->type != open_parenthesis) {
+        ERR(SYNTAX_ERROR, "Opening parenthesis expected!");
+    }
+    NEXT_TOKEN();
+
+    while (token->token != close_parenthesis) {
+
+        token_t token_clone;
+        token_clone.type = token->type;
+        token_clone.token = malloc(strlen(token->token)+1);
+        strcpt(token_clone.token, token->token);
+
+        conditional_statement_add_condition_token(statement, &token_clone);
+        NEXT_TOKEN();
+    }
+
+    // Check anyway, because loop can end due to seg fault
+    if (token->token != close_parenthesis) {
+        ERR(SYNTAX_ERROR, "Closing parenthesis expected.");
+    }
+
+    NEXT_TOKEN();
+    // TODO: Save this on a state if it's on a new line
+
+    if (token->token != open_bracket) {
+        ERR(SYNTAX_ERROR, "Opening bracket expected!");
+    }
+
+    NEXT_TOKEN();
+
+    while (token->token != close_bracket) {
+
+        token_t token_clone;
+        token_clone.type = token->type;
+        token_clone.token = malloc(strlen(token->token)+1);
+        strcpt(token_clone.token, token->token);
+
+        conditional_statement_add_code(statement, &token_clone);
+        NEXT_TOKEN();
+    }
+
+    // Check anyway, because loop can end due to seg fault
+    if (token->token != close_bracket) {
+        ERR(SYNTAX_ERROR, "Closing bracket expected.");
+    }
+
+    // TODO: Evaluate condition, and execute in a new scope if it's true
+
 }
 
 #define REQUIRE_TOKENS 1
@@ -588,11 +638,20 @@ int parser_create_function(List* state, List *tokens, context_t *context, int i)
 
 void parser_parse_tokens(List* state, List *tokens, context_t *context)
 {
+
+    // * Token debug -- Not needed anymore
+    // for (int i = 0; i < tokens->usedLength; i++)
+    // {
+    //     token_t *token = list_get(tokens, i);
+    //     printf(" [\"%s\":%s]\n", token->token, token_type_str[token->type]);
+    // }
+    // printf("\n");
+
     int i = 0;
 
     parser_state_t* curr_state = GET_TOP_STATE();
     if (curr_state != NULL) {
-        switch (curr_state->current_task)
+        switch (curr_state->task)
         {
         case func_creation_awaiting_opening_bracket:
             i = parser_create_function(state, tokens, context, i);
@@ -610,7 +669,7 @@ void parser_parse_tokens(List* state, List *tokens, context_t *context)
     {
         token_t *token = list_get(tokens, i);
 
-        if (token->type == semicolon)
+        if (token->type == line_end)
             continue;
 
         else if (token->type == var_definition)
@@ -629,6 +688,10 @@ void parser_parse_tokens(List* state, List *tokens, context_t *context)
         else if (token->type == function_definition)
         {
             i = parser_create_function(state, tokens, context, i);
+        }
+        // If conditional
+        else if (token->type == if_keyword) {
+            i = parser_create_if_conditional(state, tokens, context, i);
         }
         else
         {

@@ -26,17 +26,17 @@ context_t* context_create(context_t* parent) {
 void context_free(context_t* context) {
 
     for (int i = 0; i < context->varlist->usedLength; i++) {
-        variable_free(list_get(context->varlist, i));
+        variable_free(*((variable_t**)list_get(context->varlist, i)));
     }
     list_free(context->varlist);
 
     for (int i = 0; i < context->funclist->usedLength; i++) {
-        function_free(list_get(context->funclist, i));
+        function_free(*((function_t**)list_get(context->funclist, i)));
     }
     list_free(context->funclist);
 
     for (int i = 0; i < context->children->usedLength; i++) {
-        context_t* child = (context_t*)list_get(context->children, i);
+        context_t* child = *(context_t**)list_get(context->children, i);
         context_free(child);
     }
     list_free(context->children);

@@ -42,13 +42,18 @@ typedef enum {
     // Symbols
     comma,
     dot,
-    semicolon,
+    line_end, // Old: Semicolon, but can also be a Newline
 
     open_parenthesis,
     close_parenthesis,
 
     open_bracket,
     close_bracket,
+
+    // Keywords
+    if_keyword,
+    else_keyword,
+    while_keyword,
 
     UNKNOWN
 

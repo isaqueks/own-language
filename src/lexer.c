@@ -33,11 +33,16 @@ extern char *token_type_str[] = {
     "function_call",
     "comma",
     "dot",
-    "semicolon",
+    "line_end",
     "open_parenthesis",
     "close_parenthesis",
     "open_bracket",
     "close_bracket",
+    // Keywords
+    "if_keyword",
+    "else_keyword",
+    "while_keyword",
+
     "UNKNOWN"
     
 };
@@ -50,7 +55,7 @@ extern char *token_type_str[] = {
     ! value_assignment {=}, string_literal {Hello World}
 */
 
-char Symbols[] = "=:.,()[]+-*/{};";
+char Symbols[] = "=:.,()[]+-*/{};\n";
 token_type_t SymbolTypes[] = {value_assignment, var_type_def_symbol, dot, comma, open_parenthesis,
     close_parenthesis, array_begining, array_end,
 
@@ -62,7 +67,8 @@ token_type_t SymbolTypes[] = {value_assignment, var_type_def_symbol, dot, comma,
     open_bracket,
     close_bracket,
 
-    semicolon
+    line_end,
+    line_end
 };
 
 char* legal_name_start = "$_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -75,6 +81,10 @@ bool lexer_is_number(char* str) {
         *str++;
     }
     return true;
+}
+
+bool _isspace(char ch) {
+    return ch == ' ' || ch == '\t' || ch == '\r';
 }
 
 List *lexer_prelex_line(char *line)
@@ -109,7 +119,7 @@ List *lexer_prelex_line(char *line)
         }
 
         if (((
-                isspace(ch) ||
+                _isspace(ch) ||
                 symbolIndex != NULL ||
                 ch == '"'
                  ) &&
@@ -234,6 +244,19 @@ List *lexer_define_tokens(List *prelexed_tokens)
             {
                 token->type = function_name_definition;
             }
+        }
+
+        else if (token->type == UNKNOWN && strcmp(token->token, "if") == 0)
+        {
+            token->type = if_keyword;
+        }
+        else if (token->type == UNKNOWN && strcmp(token->token, "else") == 0)
+        {
+            token->type = else_keyword;
+        }
+        else if (token->type == UNKNOWN && strcmp(token->token, "while") == 0)
+        {
+            token->type = while_keyword;
         }
         
         else if (token->type == UNKNOWN) {

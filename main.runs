@@ -1,5 +1,9 @@
-var x: Any = "hello world"
-var y: String = x
+function Test(X: String) {
+    function Y {
+        print(X)
+    }
+    Y();
+    Test(X);
+}
 
-print(x)
-print(y)
+Test("Oi");
