@@ -11,11 +11,15 @@
 typedef enum
 {
     no_pending_task,
-    func_creation_awaiting_opening_bracket,
+    output_ready,
+
     func_creation_awaiting_end,
 
-    conditional_awaiting_opening_bracket,
     conditional_awaiting_end,
+
+    block_awaiting_start,
+    block_awaiting_end
+    
 } parser_state_task_t;
 
 typedef struct {
@@ -24,8 +28,12 @@ typedef struct {
     void* memory;
 } parser_state_t;
 
+#define STATE(t, f, m) ((parser_state_t){t, f, m})
+
 void parser_parse(List* state, char* line, context_t* context);
+
 void parser_parse_tokens(List* state, List* tokens, context_t* context);
+
 void parser_function_invoke(List* state, function_t* function, context_t* context);
 
 int parser_eval_expr_until_tokens(List* state, List* tokens, context_t* context,

@@ -35,6 +35,10 @@ int main(int argc, char const *argv[])
             parser_parse(parser_state, line, main);
         }
 
+        while(parser_state->usedLength > 0) {
+            parser_parse(parser_state, "\n", main);
+        }
+
         fclose(fp);
         if (line)
             free(line);

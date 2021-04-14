@@ -1,0 +1,1 @@
+gdb --args main.exe main.runs

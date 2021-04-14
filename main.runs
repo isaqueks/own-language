@@ -1,9 +1,12 @@
-function Test(X: String) {
-    function Y {
-        print(X)
+function WriteLine (value: String, count: Number) {
+    if (1) {
+        print("Se eh um teste, esta funcionando!")
     }
-    Y();
-    Test(X);
+    var i: Number = 0;
+    while(i < count) {
+        print(value)
+        i = i + 0.1
+    }
 }
 
-Test("Oi");
+WriteLine("Teste!", 5)

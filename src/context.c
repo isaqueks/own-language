@@ -1,6 +1,6 @@
 #include "context.h"
 
-int global_id = 0;
+int context_global_id = 0;
 context_t* context_create(context_t* parent) {
 
     int level = 0;
@@ -16,7 +16,7 @@ context_t* context_create(context_t* parent) {
     ctx->varlist = create_list(sizeof(variable_t*), 16);
     ctx->funclist = create_list(sizeof(function_t*), 16);
 
-    ctx->id = global_id++;
+    ctx->id = context_global_id++;
     ctx->context_level = level;
     ctx->parent = parent;
 
@@ -77,8 +77,10 @@ variable_t* context_search_variable_unsafe(context_t* context, char* varname) {
 
 variable_t* context_search_variable (context_t* context, char* varname) {
     variable_t* var = context_search_variable_unsafe(context, varname);
-    if (var == NULL)
+    if (var == NULL) {
+        printf("varname: %s\n", varname);
         Throw("No corresponding variable.");
+    }
     return var;
 }
 

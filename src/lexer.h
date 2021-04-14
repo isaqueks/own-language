@@ -24,6 +24,7 @@ typedef enum {
     operation_sub,
     operation_mul,
     operation_div,
+    operation_negation,
 
     // Condition
 

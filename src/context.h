@@ -12,11 +12,11 @@ typedef struct {
     int context_level;
     void* parent;
     List* varlist;
-    List* children;
     List* funclist;
+    List* children;
 } context_t;
 
-extern int global_id;
+extern int context_global_id;
 context_t* context_create(context_t* parent);
 
 void context_free(context_t* context);

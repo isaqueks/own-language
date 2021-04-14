@@ -22,6 +22,7 @@ extern char *token_type_str[] = {
     "operation_sub",
     "operation_mul",
     "operation_div",
+    "operation_negation",
     "cond_equal",
     "cond_not_equal",
     "cond_higher",
@@ -55,8 +56,8 @@ extern char *token_type_str[] = {
     ! value_assignment {=}, string_literal {Hello World}
 */
 
-char Symbols[] = "=:.,()[]+-*/{};\n";
-token_type_t SymbolTypes[] = {value_assignment, var_type_def_symbol, dot, comma, open_parenthesis,
+char Symbols[] = "=:.,()[]+-*/{};\n><!";
+token_type_t SymbolTypes[] = {UNKNOWN, var_type_def_symbol, dot, comma, open_parenthesis,
     close_parenthesis, array_begining, array_end,
 
     operation_sum,
@@ -68,7 +69,20 @@ token_type_t SymbolTypes[] = {value_assignment, var_type_def_symbol, dot, comma,
     close_bracket,
 
     line_end,
-    line_end
+    line_end,
+
+    cond_higher,
+    cond_less,
+
+    operation_negation
+};
+
+char BeforeEqualComparsion[] = "=!><";
+token_type_t BeforeEqualComparsionTypes[] = {
+    cond_equal,
+    cond_not_equal,
+    cond_higher_or_equal,
+    cond_less_or_equal
 };
 
 char* legal_name_start = "$_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -106,6 +120,7 @@ List *lexer_prelex_line(char *line)
         char ch = line[index];
 
         int symbolIndex = (index < length && ch != 0) ? strchr(Symbols, ch) : NULL;
+
         if (ch == '.' && symbolIndex != NULL) {
             currentToken[currentTokenIndex] = 0;
             if (lexer_is_number(currentToken))
@@ -115,14 +130,17 @@ List *lexer_prelex_line(char *line)
         if (!insideString && ((currentTokenIndex == 0 && symbolIndex != NULL))) {
             addNext = true;
             currentToken[currentTokenIndex++] = ch;
+            if (strchr(BeforeEqualComparsion, ch) != NULL && line[index+1] == '=') {
+                currentToken[currentTokenIndex++] = line[++index];
+            }
             ch = 0;
         }
 
         if (((
                 _isspace(ch) ||
                 symbolIndex != NULL ||
-                ch == '"'
-                 ) &&
+                ch == '"' 
+                ) &&
              !insideString) ||
             (ch == '"' && insideString) ||
             addNext || index == length)
@@ -139,6 +157,7 @@ List *lexer_prelex_line(char *line)
                 insideString = !insideString;
             }
 
+
             if (currentTokenIndex > 0)
             {
                 currentToken[currentTokenIndex++] = 0x00;
@@ -151,8 +170,9 @@ List *lexer_prelex_line(char *line)
                 token.token = tok;
                 token.type = UNKNOWN;
 
-                if (strLiteral)
+                if (strLiteral) {
                     token.type = string_literal;
+                }
                 else if (isdigit(currentToken[0]))
                 {
                     bool isnum = lexer_is_number(currentToken);
@@ -168,13 +188,19 @@ List *lexer_prelex_line(char *line)
                 if (symbolIndex != NULL && ch > 0)
                 {
                     currentToken[currentTokenIndex++] = ch;
+
                     addNext = true;
-                    ch = 0; goto top;
+
+                    if (strchr(BeforeEqualComparsion, ch) != NULL && line[index+1] == '=' && currentTokenIndex == 1) {
+                        currentToken[currentTokenIndex++] = line[++index];
+                    }
+
+                    ch = 0;
+                    goto top;
                 }
             }
             continue;
         }
-
         currentToken[currentTokenIndex++] = ch;
     }
 
@@ -204,7 +230,7 @@ List *lexer_define_tokens(List *prelexed_tokens)
     {
         token_t *token = (token_t *)list_get(prelexed_tokens, i);
 
-             if (token->type == UNKNOWN && strcmp(token->token, "var") == 0)
+        if (token->type == UNKNOWN && strcmp(token->token, "var") == 0)
         {
             token->type = var_definition;
             // Next token should be a name
@@ -233,6 +259,16 @@ List *lexer_define_tokens(List *prelexed_tokens)
             {
                 ERR(SYNTAX_ERROR, "Type expected!");
             }
+        }
+
+        else if (token->type == UNKNOWN && token->token[1] == '=' && 
+        strlen(token->token) == 2 && strchr(BeforeEqualComparsion, token->token[0]) != NULL) {
+            token_type_t condType = BeforeEqualComparsionTypes[strchr(BeforeEqualComparsion, token->token[0]) - BeforeEqualComparsion];
+            token->type = condType;
+        }
+
+        else if (token->type == UNKNOWN && strcmp(token->token, "=") == 0) {
+            token->type = value_assignment;
         }
 
         else if (token->type == UNKNOWN && strcmp(token->token, "function") == 0)

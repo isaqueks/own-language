@@ -22,18 +22,29 @@ void conditional_statement_add_code
     list_add(cond->tokens, token);
 }
 
+void conditional_statement_create_scope(conditional_statement_t* cond, context_t* parent_scope) {
+    cond->scope = context_create(parent_scope);
+}
+
+void conditional_statement_set_scope(conditional_statement_t* cond, context_t* scope) {
+    cond->scope = scope;
+}
+
 void conditional_statement_free(conditional_statement_t* cond) {
-    for (int i = 0; i < cond->tokens; i++) {
+
+    for (int i = 0; i < cond->tokens->usedLength; i++) {
         token_t* tok = ((token_t*)list_get(cond->tokens, i));
         free(tok->token);
     }
     list_free(cond->tokens);
 
-    for (int i = 0; i < cond->condition_tokens; i++) {
-        token_t* tok = ((token_t*)list_get(cond->tokens, i));
+    for (int i = 0; i < cond->condition_tokens->usedLength; i++) {
+        token_t* tok = ((token_t*)list_get(cond->condition_tokens, i));
         free(tok->token);
     }
     list_free(cond->condition_tokens);
+
+    context_free(cond->scope);
 
     free(cond);
 }
