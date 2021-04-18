@@ -11,6 +11,7 @@
 #include "variable.h"
 #include "primtypes.h"
 #include "conditional.h"
+#include "expr.h"
 
 
 #define NEXT_TOKEN()                                   \
@@ -28,19 +29,6 @@
 #define GET_NEXT_TOKEN() ((token_t *)list_get(tokens, i + 1))
 
 #define GET_TOP_STATE() (state->usedLength == 0 ? NULL : (parser_state_t*)(list_get(state, state->usedLength-1)))
-
-void __RUNTIME_ERR(char* x, char* y, char* filename, int line) {
-    printf("[%s:%d] %s: %s.", filename, line, x, y);
-    while(1);
-}
-
-void __ERR(char* x, char* y, char* token_type, char* token, int i, char* filename, int line)  {
-    printf("[%s:%d] %s: %s: %s (\"%s\"[%d]) received.", filename, line, x, y, token_type, token, i);
-    while(1);
-}
-
-#define RUNTIME_ERR(x, y) __RUNTIME_ERR(x, y, __FILE__, __LINE__)
-#define ERR(x, y) __ERR(x, y, token_type_str[token->type], token->token, i, __FILE__, __LINE__)
 
 bool parser_set_state(List* state, parser_state_task_t current_tasks[], int taskc, parser_state_t* state_to_add) {
     parser_state_t* curr = GET_TOP_STATE();

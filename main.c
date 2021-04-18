@@ -9,13 +9,62 @@
 #include "src/context.h"
 #include "src/parser.h"
 #include "src/function.h"
+#include "src/expr.h"
 
 #include "built_in_lib/defaultlib.h"
+
+void print_op(operation_t* op) {
+    printf("[");
+
+    if (op->a_is_expr_value) {
+        printf(" %f ", *((double*)((expr_value_t*)op->value_a)->value));
+    } else {
+        print_op(op->value_a);
+    }
+
+    if (op->value_b != NULL) {
+        switch(op->operation) {
+            case operation_sum:
+                printf("+");
+                break;
+            case operation_sub:
+                printf("-");
+                break;
+            case operation_mul:
+                printf("*");
+                break;
+            case operation_div:
+                printf("/");
+                break;
+            default:
+                printf("Not implemented");
+                break;
+        }
+
+        if (op->b_is_expr_value) {
+            printf(" %f ", *((double*)((expr_value_t*)op->value_b)->value));
+        } else {
+            print_op(op->value_b);
+        }
+    }
+
+    printf("]");
+}
 
 int main(int argc, char const *argv[])
 {
 
     context_t* main = context_create(NULL);
+
+    List* tok = lexer_lex_line("5+10+5+2");
+    int out_int = 0;
+    List* ops = expr_compile(tok, main, &out_int);
+    for (int j = 0; j < ops->usedLength; j++) {
+        operation_t* op = list_get(ops, j);
+        print_op(op);
+    }
+    return 0;
+
 
     lib_install(main);
 

@@ -1,12 +1,1 @@
-function WriteLine (value: String, count: Number) {
-    if (1) {
-        print("Se eh um teste, esta funcionando!")
-    }
-    var i: Number = 0;
-    while(i < count) {
-        print(value)
-        i = i + 0.1
-    }
-}
-
-WriteLine("Teste!", 5)
+while 10+5-2
