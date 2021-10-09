@@ -32,13 +32,13 @@ void conditional_statement_set_scope(conditional_statement_t* cond, context_t* s
 
 void conditional_statement_free(conditional_statement_t* cond) {
 
-    for (int i = 0; i < cond->tokens->usedLength; i++) {
+    for (int i = 0; i < cond->tokens->used_length; i++) {
         token_t* tok = ((token_t*)list_get(cond->tokens, i));
         free(tok->token);
     }
     list_free(cond->tokens);
 
-    for (int i = 0; i < cond->condition_tokens->usedLength; i++) {
+    for (int i = 0; i < cond->condition_tokens->used_length; i++) {
         token_t* tok = ((token_t*)list_get(cond->condition_tokens, i));
         free(tok->token);
     }

@@ -59,7 +59,8 @@ int main(int argc, char const *argv[])
     List* tok = lexer_lex_line("5+10+5+2");
     int out_int = 0;
     List* ops = expr_compile(tok, main, &out_int);
-    for (int j = 0; j < ops->usedLength; j++) {
+
+    for (int j = 0; j < ops->used_length; j++) {
         operation_t* op = list_get(ops, j);
         print_op(op);
     }
@@ -84,7 +85,7 @@ int main(int argc, char const *argv[])
             parser_parse(parser_state, line, main);
         }
 
-        while(parser_state->usedLength > 0) {
+        while(parser_state->used_length > 0) {
             parser_parse(parser_state, "\n", main);
         }
 

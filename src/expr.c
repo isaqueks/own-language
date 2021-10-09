@@ -3,7 +3,7 @@
 
 // #define NEXT_TOKEN()                                   \
 //     {                                                  \
-//         if (*out_i + 1 == tokens->usedLength)               \
+//         if (*out_i + 1 == tokens->used_length)               \
 //             ERR(SYNTAX_ERROR, "Expression required."); \
 //         token = list_get(tokens, ++(*out_i));                 \
 //     }
@@ -114,7 +114,7 @@ List* expr_compile(List* tokens, context_t* context, int* out_i) {
     operation_t* curr_operation = operation_create(NULL, NULL, false, false, UNKNOWN);
     int operation_element_index = 0;
 
-    for (; i < tokens->usedLength; i++) {
+    for (; i < tokens->used_length; i++) {
         token = list_get(tokens, i);
         bool is_value = false;
         if (token->type == var_name || token->type == string_literal || token->type == number) {
@@ -138,12 +138,12 @@ List* expr_compile(List* tokens, context_t* context, int* out_i) {
 
         } else {
             if (token->type >= operation_sum && token->type <= cond_less_or_equal) {
-                if (operation_element_index == 1 || (result->usedLength > 0 && operation_element_index == 0)) {
+                if (operation_element_index == 1 || (result->used_length > 0 && operation_element_index == 0)) {
 
                     curr_operation->operation = token->type;
 
                     if (operation_element_index == 0) {
-                        curr_operation->value_a = list_get(result, result->usedLength-1);
+                        curr_operation->value_a = list_get(result, result->used_length-1);
                         // Its not expr_value_t, its operation_t
                         curr_operation->a_is_expr_value = false; 
                         operation_element_index++;
@@ -158,9 +158,9 @@ List* expr_compile(List* tokens, context_t* context, int* out_i) {
             }
         }
 
-        if (operation_element_index == 3 || i >= tokens->usedLength-1) {
+        if (operation_element_index == 3 || i >= tokens->used_length-1) {
             list_add(result, curr_operation);
-            if (i < tokens->usedLength-1) {
+            if (i < tokens->used_length-1) {
                 curr_operation = operation_create(NULL, NULL, false, false, UNKNOWN);
             }
             operation_element_index = 0;

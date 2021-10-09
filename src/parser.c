@@ -16,7 +16,7 @@
 
 #define NEXT_TOKEN()                                   \
     {                                                  \
-        if (i + 1 == tokens->usedLength)               \
+        if (i + 1 == tokens->used_length)               \
             ERR(SYNTAX_ERROR, "Expression required."); \
         token = list_get(tokens, ++i);                 \
     }
@@ -28,7 +28,7 @@
 #define GET_PREV_TOKEN() ((token_t *)list_get(tokens, i - 1))
 #define GET_NEXT_TOKEN() ((token_t *)list_get(tokens, i + 1))
 
-#define GET_TOP_STATE() (state->usedLength == 0 ? NULL : (parser_state_t*)(list_get(state, state->usedLength-1)))
+#define GET_TOP_STATE() (state->used_length == 0 ? NULL : (parser_state_t*)(list_get(state, state->used_length-1)))
 
 bool parser_set_state(List* state, parser_state_task_t current_tasks[], int taskc, parser_state_t* state_to_add) {
     parser_state_t* curr = GET_TOP_STATE();
@@ -43,7 +43,7 @@ bool parser_set_state(List* state, parser_state_task_t current_tasks[], int task
             }
         }
         if (equal_count > 0) {
-            list_set(state, state->usedLength-1, state_to_add);
+            list_set(state, state->used_length-1, state_to_add);
             return false;
         } else {
             list_add(state, state_to_add);
@@ -66,7 +66,7 @@ bool parser_remove_state_if_mine(List* state, parser_state_task_t current_tasks[
         if (equal_count == 0) {
             return false;
         } else {
-            list_remove_at(state, state->usedLength-1);
+            list_remove_at(state, state->used_length-1);
             return true;
         }
     }
@@ -83,7 +83,7 @@ int parser_eval_expr_until_tokens(List* state, List *tokens, context_t *context,
     bool operation_time = false;
     token_type_t operation;
 
-    for (; i < tokens->usedLength; i++)
+    for (; i < tokens->used_length; i++)
     {
         token_t *token = list_get(tokens, i);
         BREAK_IF_LINE_END();
@@ -391,7 +391,7 @@ void parser_parse(List* state, char *line, context_t *context)
 
     parser_parse_tokens(state, tokenList, context);
 
-    for (int i = 0; i < tokenList->usedLength; i++)
+    for (int i = 0; i < tokenList->used_length; i++)
     {
         token_t *token = (token_t *)list_get(tokenList, i);
         free(token->token);
@@ -494,7 +494,7 @@ int parser_call_function(List* state, List *tokens, context_t *context, int i)
     context_t *function_scope = context_create(context);
 
     int model_index = 0;
-    for (i++; i < tokens->usedLength; i++)
+    for (i++; i < tokens->used_length; i++)
     {
 
         token = list_get(tokens, i);
@@ -503,7 +503,7 @@ int parser_call_function(List* state, List *tokens, context_t *context, int i)
         if (token->type == close_parenthesis)
             break;
 
-        if (model_index >= function->arg_models->usedLength) {
+        if (model_index >= function->arg_models->used_length) {
             RUNTIME_ERR(SYNTAX_ERROR, "More arguments than expected were passed.");
         }
 
@@ -565,14 +565,14 @@ int parser_create_function(List* state, List *tokens, context_t *context, int i)
     // The next token should be a ( if it has arguments or a {
     // Tokens end reached
     // So, no-arg function and multiline
-    if (i+1 == tokens->usedLength) {
+    if (i+1 == tokens->used_length) {
         goto function_create;
     }
     List *arglist = create_list(sizeof(variable_t *), 8);
     NEXT_TOKEN();
     if (token->type == open_parenthesis)
     {
-        for (++i; i < tokens->usedLength; i++)
+        for (++i; i < tokens->used_length; i++)
         {
             // arg: T (3 tokens per arg)
             token = list_get(tokens, i);
@@ -614,7 +614,7 @@ int parser_create_function(List* state, List *tokens, context_t *context, int i)
                 continue;
             }
             else if (token->type == close_parenthesis) {
-                if (i < tokens->usedLength-1) {
+                if (i < tokens->used_length-1) {
                     NEXT_TOKEN();
                 }
                 break;
@@ -696,7 +696,7 @@ int parser_read_block(List* tokens, context_t* context, int i, List** out_block,
 
         list_add(block, &clone);
 
-        if (i >= tokens->usedLength -1) {
+        if (i >= tokens->used_length -1) {
             break;
         }
 
@@ -737,7 +737,7 @@ int parser_read_block_save_state(List* state, List* tokens, context_t* context, 
     {
         parser_set_state(state, read_block_states, 2, &STATE(block_awaiting_start, opened_brackets, block));
         while(token->type == line_end) {
-            if (i >= tokens->usedLength-1) {
+            if (i >= tokens->used_length-1) {
                 break;
             }
             NEXT_TOKEN();
@@ -756,7 +756,7 @@ int parser_read_block_save_state(List* state, List* tokens, context_t* context, 
 
         parser_remove_state_if_mine(state, read_block_states, 2);
 
-        if (i >= tokens->usedLength-1) {
+        if (i >= tokens->used_length-1) {
             *status = -1;
             return i;
         }
@@ -893,7 +893,7 @@ void parser_parse_tokens(List* state, List *tokens, context_t *context)
 {
 
     // * Token debug -- Not needed anymore
-    // for (int i = 0; i < tokens->usedLength; i++)
+    // for (int i = 0; i < tokens->used_length; i++)
     // {
     //     token_t *token = list_get(tokens, i);
     //     printf(" [\"%s\":%s] \n", token->token, token_type_str[token->type]);
@@ -925,7 +925,7 @@ void parser_parse_tokens(List* state, List *tokens, context_t *context)
         }
     }
 
-    for (; i < tokens->usedLength; i++)
+    for (; i < tokens->used_length; i++)
     {
         token_t *token = list_get(tokens, i);
 

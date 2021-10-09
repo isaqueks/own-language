@@ -219,14 +219,14 @@ List *lexer_define_tokens(List *prelexed_tokens)
 
 #define NEXT_TOKEN()                                    \
     {                                                   \
-        if (i + 1 == prelexed_tokens->usedLength)       \
+        if (i + 1 == prelexed_tokens->used_length)       \
             ERR(SYNTAX_ERROR, "Expression required.");  \
         token = list_get(prelexed_tokens, ++i); \
     }
 
 #define GET_PREV_TOKEN() ((token_t *)list_get(prelexed_tokens, i-1))
 
-    for (int i = 0; i < prelexed_tokens->usedLength; i++)
+    for (int i = 0; i < prelexed_tokens->used_length; i++)
     {
         token_t *token = (token_t *)list_get(prelexed_tokens, i);
 

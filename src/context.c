@@ -25,24 +25,24 @@ context_t* context_create(context_t* parent) {
 
 void context_free(context_t* context) {
 
-    for (int i = 0; i < context->varlist->usedLength; i++) {
+    for (int i = 0; i < context->varlist->used_length; i++) {
         variable_free(*((variable_t**)list_get(context->varlist, i)));
     }
     list_free(context->varlist);
 
-    for (int i = 0; i < context->funclist->usedLength; i++) {
+    for (int i = 0; i < context->funclist->used_length; i++) {
         function_free(*((function_t**)list_get(context->funclist, i)));
     }
     list_free(context->funclist);
 
-    for (int i = 0; i < context->children->usedLength; i++) {
+    for (int i = 0; i < context->children->used_length; i++) {
         context_t* child = *(context_t**)list_get(context->children, i);
         context_free(child);
     }
     list_free(context->children);
 
     bool successfullCleaned = false;
-    for(int i = 0; i < (((context_t*)(context->parent))->children->usedLength); i++) {
+    for(int i = 0; i < (((context_t*)(context->parent))->children->used_length); i++) {
         context_t* ctx = *(context_t**)list_get(((context_t*)(context->parent))->children, i);
         if (ctx->id == context->id) {
             list_remove_at(((context_t*)(context->parent))->children, i);
@@ -59,10 +59,10 @@ void context_free(context_t* context) {
 
 variable_t* context_search_variable_unsafe(context_t* context, char* varname) {
 
-    //printf("[Scope lookup]: %s (%d) <%d>\n", varname, context->id, context->children->usedLength);
+    //printf("[Scope lookup]: %s (%d) <%d>\n", varname, context->id, context->children->used_length);
 
     while(context != NULL) {
-        for(int i = 0; i < context->varlist->usedLength; i++) {
+        for(int i = 0; i < context->varlist->used_length; i++) {
             variable_t* var = *(variable_t**)list_get(context->varlist, i);
             if (strcmp(var->name, varname) == 0)
                 return var;
@@ -94,10 +94,10 @@ void context_add_function(context_t* context, function_t* func) {
 }
 
 function_t* context_search_function_unsafe(context_t* context, char* funcname) {
-    //printf("[Scope lookup function]: %s (%d) <%d>\n", funcname, context->id, context->children->usedLength);
+    //printf("[Scope lookup function]: %s (%d) <%d>\n", funcname, context->id, context->children->used_length);
 
     while(context != NULL) {
-        for(int i = 0; i < context->funclist->usedLength; i++) {
+        for(int i = 0; i < context->funclist->used_length; i++) {
             function_t* func = *(function_t**)list_get(context->funclist, i);
             if (strcmp(func->name, funcname) == 0)
                 return func;

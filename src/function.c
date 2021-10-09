@@ -33,7 +33,7 @@ native_function_handle_t native_handle) {
 }
 
 function_t* function_add_code(function_t* fn, List* tokens) {
-    for (int i = 0; i < tokens->usedLength; i++) {
+    for (int i = 0; i < tokens->used_length; i++) {
         list_add(fn->tokens, list_get(tokens, i));
     }
     return fn;
@@ -45,7 +45,7 @@ function_t* function_add_token(function_t* fn, token_t* token) {
 }
 
 variable_t* function_get_arg(function_t* fn, char* argname) {
-    for (int i = 0; i < fn->arg_models->usedLength; i++) {
+    for (int i = 0; i < fn->arg_models->used_length; i++) {
         variable_t* arg = *((variable_t**)list_get(fn->arg_models, i));
         if (strcmp(arg->name, argname) == 0)
             return arg;
@@ -55,12 +55,12 @@ variable_t* function_get_arg(function_t* fn, char* argname) {
 
 void function_free(function_t* fn) {
     free(fn->name);
-    for (int i = 0; i < fn->arg_models->usedLength; i++) {
+    for (int i = 0; i < fn->arg_models->used_length; i++) {
         variable_free(*((variable_t**)list_get(fn->arg_models, i)));
     }
     list_free(fn->arg_models);
     if (fn->tokens != NULL) {
-        for (int i = 0; i < fn->tokens->usedLength; i++) {
+        for (int i = 0; i < fn->tokens->used_length; i++) {
             token_t* tok = ((token_t*)list_get(fn->tokens, i));
             free(tok->token);
         }

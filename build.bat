@@ -1,1 +1,1 @@
-gcc -g main.c libs/list/list.c src/variable.c src/errors.c src/expr.c src/conditional.c src/lexer.c src/parser.c src/function.c src/primtypes.c src/context.c built_in_lib/io.c built_in_lib/defaultlib.c -o main.exe
+gcc -g main.c libs/list/list.c src/variable.c src/errors.c src/expr.c src/conditional.c src/lexer.c src/parser.c src/function.c src/primtypes.c src/context.c built_in_lib/io.c built_in_lib/defaultlib.c -o main
