@@ -20,14 +20,6 @@ int main(int argc, char const *argv[])
     context_t* main = context_create(NULL);
 
     List* tok = lexer_lex_line("(((1+2)*(3/5))");
-    // List* tok = lexer_lex_line("(((1+(2*1))-5))");
-
-    for (int i = 0; i < tok->used_length; i++)
-    {
-        token_t *token = list_get(tok, i);
-        printf(" [\"%s\":%s] \n", token->token, token_type_str[token->type]);
-    }
-    printf("\n");
 
     int out_int = 0;
     List* ops = expr_parse_linear(tok, main, &out_int, 0);
