@@ -14,10 +14,11 @@ int expr_op_get_priority(token_type_t op_type) {
     return -1;
 }
 
-expr_item_t *expr_item_create(void *item_src, expr_item_type_t type) {
+expr_item_t *expr_item_create(void *item_src, expr_item_type_t type, variable_type_t val_type) {
     expr_item_t *item = (expr_item_t *)malloc(sizeof(expr_item_t));
     item->ptr = item_src;
     item->type = type;
+    item->value_type = val_type;
     return item;
 }
 
@@ -26,27 +27,68 @@ void expr_item_free(expr_item_t *expr) {
     free(expr);
 }
 
-List *expr_parse_linear(List *tokens, context_t *context, int *out_i) {
+List *expr_parse_linear(List *tokens, context_t *context, int *out_i, int opened_parenthesis) {
     List *result = create_list(sizeof(expr_item_t), 16);
     int i = *out_i;
 
     for (; i < tokens->used_length; i++) {
         token_t *token = (token_t *)list_get(tokens, i);
-        expr_item_t *item = expr_item_create(NULL, item_value);
+        expr_item_t *item = expr_item_create(NULL, item_value, Any);
 
         if (token->type == number) {
             item->type = item_value;
             double *value = (double *)malloc(sizeof(double));
             *value = String_toNumber(token->token);
             item->ptr = (void *)value;
-        } else if (token->type == operation_sum ||
+            item->value_type = Number;
+        } 
+        else if (token->type == string_literal) {
+            item->type = item_value;
+            int len = strlen(token->token);
+            item->ptr = malloc(len+1);
+            strcpy(item->ptr, token->token);
+            item->value_type = String;
+        }
+        else if (token->type == var_name) {
+            item->type = item_value;
+            variable_t* var = context_search_variable(context, token->token);
+            item->ptr = variable_get_value(var);
+            item->value_type = var->type;
+        }
+        else if (token->type == operation_sum ||
                    token->type == operation_sub ||
                    token->type == operation_mul ||
                    token->type == operation_div) {
             item->type = item_operator;
             item->ptr = malloc(sizeof(token_type_t));
             *((token_type_t *)item->ptr) = token->type;
-        } else {
+        } 
+        else if (token->type == open_parenthesis) {
+            *out_i = i+1;
+            List* linear_inside_parenthesis = expr_parse_linear(tokens, context, out_i, 1);
+            i = (*out_i);
+            List* tree = expr_mount_tree(linear_inside_parenthesis, MAX_OP_PRIORITY);
+            expr_item_free(item);
+            
+            // Now, merge the lists
+            for (int j = 0; j < tree->used_length; j++) {
+                list_add(result, list_get(tree, j));
+            }
+            list_free(tree);
+            continue;
+        }
+        else if (token->type == close_parenthesis) {
+            opened_parenthesis--;
+            // Not used
+            // TODO: Only alloc if needed
+            expr_item_free(item);
+            if (opened_parenthesis == 0) {
+                *out_i = i;
+                return result;
+            }
+            continue;
+        }
+        else {
             RUNTIME_ERR("Not Implemented!", "YET!");
         }
 
@@ -112,18 +154,18 @@ List *expr_mount_tree(List *expr, int curr_priority) {
                     expr_item_t* last_term_raw = (expr_item_t*)list_get(result, result_last_index);
                     // Backup last item, because it'll be
                     // overwritten with list_set
-                    expr_item_t* last_term = expr_item_create(last_term_raw->ptr, last_term_raw->type);
+                    expr_item_t* last_term = expr_item_create(last_term_raw->ptr, last_term_raw->type, last_term_raw->value_type);
                     // We won't call expr_item_free
                     // because it also frees the ptr,
                     // which is used in the backup item
-                    free(last_term_raw);
+                    // free(last_term_raw);
 
                     List* grouped_term = create_list(sizeof(expr_item_t), 3);
                     list_add(grouped_term, last_term);
                     list_add(grouped_term, op);
                     list_add(grouped_term, term);
 
-                    expr_item_t* group = expr_item_create(grouped_term, item_expr);
+                    expr_item_t* group = expr_item_create(grouped_term, item_expr, Any);
                     list_set(result, result_last_index, group);
                 }
                 else {
@@ -140,7 +182,7 @@ List *expr_mount_tree(List *expr, int curr_priority) {
                     list_add(grouped_term, op);
                     list_add(grouped_term, next);
 
-                    expr_item_t* group = expr_item_create(grouped_term, item_expr);
+                    expr_item_t* group = expr_item_create(grouped_term, item_expr, Any);
                     list_add(result, group);
                 }
             }
@@ -162,6 +204,8 @@ List *expr_mount_tree(List *expr, int curr_priority) {
         list_add(result, second_item);
     }
 
+    list_free(expr);
+
     return expr_mount_tree(result, curr_priority - 1);
 }
 
@@ -170,14 +214,13 @@ void expr_print_linear(List *linear_expr) {
         expr_item_t *item = (expr_item_t *)list_get(linear_expr, i);
         switch (item->type) {
             case item_operator:
-                printf(" OP (%s) ",
-                       token_type_str[*((token_type_t *)item->ptr)]);
+                printf(" OP ");
                 break;
             case item_expr:
-                printf(" TREE (...) ");
+                printf(" EXPR ");
                 break;
             case item_value:
-                printf(" VALUE (%f) ", *((double *)item->ptr));
+                printf(" VALUE ");
                 break;
             default:
                 RUNTIME_ERR(TYPE_ERROR, "Unknown item type!");
@@ -188,8 +231,19 @@ void expr_print_linear(List *linear_expr) {
 
 void expr_print_item(expr_item_t *item) {
     if (item->type == item_value) {
-        // Let's assume it's a double by now
-        printf("%f", *((double *)item->ptr));
+        switch (item->value_type)
+        {
+            case Number:
+                printf("%f", *((double *)item->ptr));
+                break;
+            case String:
+                printf("%s", item->ptr);
+                break;
+            
+            default:
+                printf("NOT_IMPL");
+                break;
+        }
     } else if (item->type == item_operator) {
         printf("%s", token_type_str[*((token_type_t *)item->ptr)]);
     } else if (item->type == item_expr) {

@@ -19,14 +19,15 @@ typedef enum {
 typedef struct {
 
     void* ptr;
+    variable_type_t value_type;
     expr_item_type_t type;
 
 } expr_item_t;
 
-expr_item_t* expr_item_create(void* item_src, expr_item_type_t type);
+expr_item_t* expr_item_create(void* item_src, expr_item_type_t type, variable_type_t val_type);
 void expr_item_free(expr_item_t* expr);
 
-List* expr_parse_linear(List* tokens, context_t* context, int* out_i);
+List* expr_parse_linear(List* tokens, context_t* context, int* out_i, int opened_parenthesis);
 List* expr_mount_tree(List* expr, int curr_priority);
 
 void expr_print_linear(List* linear_expr);
