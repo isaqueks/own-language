@@ -8,28 +8,30 @@
 #include "context.h"
 #include "primtypes.h"
 
-typedef struct {
-    void* value;
-    variable_type_t type;
-} expr_value_t;
+typedef enum {
+
+    item_operator,
+    item_value,
+    item_expr
+
+} expr_item_type_t;
 
 typedef struct {
-    void* value_a;
-    void* value_b; // b = NULL = operation_t is not an operation, but value. So value_a is a ptr to expr_value_t
-    bool a_is_expr_value;
-    bool b_is_expr_value;
-    token_type_t operation;
-} operation_t;
 
-expr_value_t* expr_value_create(void* value, variable_type_t type);
-void expr_value_free(expr_value_t* expr);
+    void* ptr;
+    expr_item_type_t type;
 
-operation_t* operation_create(void* a, void* b, bool a_is_expr, bool b_is_expr, token_type_t op);
-void operation_free(operation_t* operation);
+} expr_item_t;
 
-List* expr_compile(List* tokens, context_t* context, int* out_i);
-variable_t* expr_eval_from_compiled(List* compiled_expr, context_t* context);
+expr_item_t* expr_item_create(void* item_src, expr_item_type_t type);
+void expr_item_free(expr_item_t* expr);
 
-bool operation_is_value(operation_t* operation);
+List* expr_parse_linear(List* tokens, context_t* context, int* out_i);
+List* expr_mount_tree(List* expr, int curr_priority);
+
+void expr_print_linear(List* linear_expr);
+void expr_print_tree(List* tree_expr);
+
+int expr_op_get_priority(token_type_t op_type);
 
 #endif

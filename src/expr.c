@@ -1,241 +1,218 @@
 #include "expr.h"
+
 #include "errors.h"
+#include "primtypes.h";
 
-// #define NEXT_TOKEN()                                   \
-//     {                                                  \
-//         if (*out_i + 1 == tokens->used_length)               \
-//             ERR(SYNTAX_ERROR, "Expression required."); \
-//         token = list_get(tokens, ++(*out_i));                 \
-//     }
+#define MAX_OP_PRIORITY 1
 
-expr_value_t* expr_value_create(void* value, variable_type_t type) {
-    expr_value_t* expr = malloc(sizeof(expr_value_t));
-    expr->type = type;
-    expr->value = value;
+int expr_op_get_priority(token_type_t op_type) {
+    if (op_type == operation_sub || op_type == operation_sum) {
+        return 0;
+    } else if (op_type == operation_mul || op_type == operation_div) {
+        return 1;
+    }
+    return -1;
 }
 
-void expr_value_free(expr_value_t* expr) {
-    free(expr->value);
+expr_item_t *expr_item_create(void *item_src, expr_item_type_t type) {
+    expr_item_t *item = (expr_item_t *)malloc(sizeof(expr_item_t));
+    item->ptr = item_src;
+    item->type = type;
+    return item;
+}
+
+void expr_item_free(expr_item_t *expr) {
+    free(expr->ptr);
     free(expr);
 }
 
-operation_t* operation_create(void* a, void* b, bool a_is_expr, bool b_is_expr, token_type_t op) {
-    operation_t* result = (operation_t*)malloc(sizeof(operation_t));
-    result->value_a = a;
-    result->value_b = b;
-    result->a_is_expr_value = a_is_expr;
-    result->b_is_expr_value = b_is_expr;
-    result->operation = op;
-    return result;
-}
-
-bool operation_is_value(operation_t* operation) {
-    return operation->value_b == NULL;
-}
-
-void operation_free(operation_t* operation) {
-    if (operation->a_is_expr_value) {
-        expr_value_free(operation->value_a);
-    }
-    else {
-        operation_free(operation->value_a);
-    }
-
-    if (operation->b_is_expr_value) {
-        expr_value_free(operation->value_b);
-    }
-    else {
-        operation_free(operation->value_b);
-    }
-    free(operation);
-}
-
-void* expr_get_value_number(char* str) {
-    double val = String_toNumber(str);
-    void* ptr = malloc(sizeof(double));
-    memcpy(ptr, &val, sizeof(double));
-    return ptr;
-}
-
-void* expr_get_value_string(char* str) {
-    char* result_str = malloc(sizeof(str)+1);
-    strcpy(result_str, str);
-    return result_str;
-}
-
-void* expr_get_value(token_t* token, context_t* context, variable_type_t* out_type) {
-    if (token->type == number) {
-
-        *out_type = Number;
-        return expr_get_value_number(token->token);
-
-    } else if (token->type == string_literal) {
-
-        *out_type = String;
-        return expr_get_value_string(token->token);
-
-    } else if (token->type == var_name) {
-
-        variable_t* var = context_search_variable(context, token->token);
-        void* value = variable_get_value(var);
-
-        if (var->type == Number) {
-
-            *out_type = Number;
-            double num = *((double*)value);
-            double* return_value = malloc(sizeof(double));
-            *return_value = num;
-            return return_value;
-
-        } else if (var->type == String) {
-
-            *out_type = String;
-            return expr_get_value_string(value);
-
-        } else {
-            RUNTIME_ERR(TYPE_ERROR, "Not implemented");
-        }
-
-    } else {
-        int i = -1;
-        ERR(TYPE_ERROR, "number, string_literal or var_name expected!");
-    }
-    return NULL;
-}
-
-List* expr_compile(List* tokens, context_t* context, int* out_i) {
-
+List *expr_parse_linear(List *tokens, context_t *context, int *out_i) {
+    List *result = create_list(sizeof(expr_item_t), 16);
     int i = *out_i;
 
-    // List of operations
-    List* result = create_list(sizeof(operation_t), 4);
-    token_t* token = list_get(tokens, i);
-
-    operation_t* curr_operation = operation_create(NULL, NULL, false, false, UNKNOWN);
-    int operation_element_index = 0;
-
     for (; i < tokens->used_length; i++) {
-        token = list_get(tokens, i);
-        bool is_value = false;
-        if (token->type == var_name || token->type == string_literal || token->type == number) {
-            is_value = true;
-        }
+        token_t *token = (token_t *)list_get(tokens, i);
+        expr_item_t *item = expr_item_create(NULL, item_value);
 
-        if (is_value) {
-            variable_type_t out_type;
-            void* value = expr_get_value(token, context, &out_type);
-
-            if (operation_element_index == 0) {
-                curr_operation->value_a = expr_value_create(value, out_type);
-                curr_operation->a_is_expr_value = true;
-            } else if (operation_element_index == 2) {
-                curr_operation->value_b = expr_value_create(value, out_type);
-                curr_operation->b_is_expr_value = true;
-            } else {
-                ERR(SYNTAX_ERROR, "Operator expected!");
-            }
-            operation_element_index++;
-
+        if (token->type == number) {
+            item->type = item_value;
+            double *value = (double *)malloc(sizeof(double));
+            *value = String_toNumber(token->token);
+            item->ptr = (void *)value;
+        } else if (token->type == operation_sum ||
+                   token->type == operation_sub ||
+                   token->type == operation_mul ||
+                   token->type == operation_div) {
+            item->type = item_operator;
+            item->ptr = malloc(sizeof(token_type_t));
+            *((token_type_t *)item->ptr) = token->type;
         } else {
-            if (token->type >= operation_sum && token->type <= cond_less_or_equal) {
-                if (operation_element_index == 1 || (result->used_length > 0 && operation_element_index == 0)) {
-
-                    curr_operation->operation = token->type;
-
-                    if (operation_element_index == 0) {
-                        curr_operation->value_a = list_get(result, result->used_length-1);
-                        // Its not expr_value_t, its operation_t
-                        curr_operation->a_is_expr_value = false; 
-                        operation_element_index++;
-                    }
-
-                } else {
-                    ERR(SYNTAX_ERROR, "Something got wrong. Operator expected!");
-                }
-                operation_element_index++;
-            } else {
-                ERR(SYNTAX_ERROR, "Operator expected!");
-            }
+            RUNTIME_ERR("Not Implemented!", "YET!");
         }
 
-        if (operation_element_index == 3 || i >= tokens->used_length-1) {
-            list_add(result, curr_operation);
-            if (i < tokens->used_length-1) {
-                curr_operation = operation_create(NULL, NULL, false, false, UNKNOWN);
-            }
-            operation_element_index = 0;
-        }
+        list_add(result, item);
     }
 
     *out_i = i;
     return result;
 }
 
-
-expr_value_t* expr_solve_operation(operation_t* operation) {
-    expr_value_t* value_a = NULL;
-    expr_value_t* value_b = NULL;
-
-    variable_type_t result_type;
-
-    void* result;
-
-    if (operation->a_is_expr_value) {
-        value_a = operation->value_a;
-    } else {
-        value_a = expr_solve_operation((operation_t*)(operation->value_a));
+List *expr_mount_tree(List *expr, int curr_priority) {
+    if (curr_priority < 0) {
+        return expr;
     }
 
-    if (operation->b_is_expr_value) {
-        value_b = operation->value_b;
-    } else {
-        value_b = expr_solve_operation((operation_t*)(operation->value_b));
+    printf("Received ");
+    expr_print_tree(expr);
+    printf("\n");
+
+    List *result = create_list(sizeof(expr_item_t), 16);
+
+    expr_item_t *first_item = NULL;
+    expr_item_t *second_item = NULL;
+
+    for (int i = 0; i < expr->used_length; i++) {
+        expr_item_t *item = (expr_item_t *)list_get(expr, i);
+
+        if (first_item == NULL) {
+            first_item = item;
+        }
+        else if (second_item == NULL) {
+            second_item = item;
+
+            expr_item_t* term, *op;
+            bool first_is_op = false;
+
+            if (first_item->type == item_operator) {
+                op = first_item;
+                term = second_item;
+                first_is_op = true;
+            }
+            else if (second_item->type == item_operator) {
+                op = second_item;
+                term = first_item;
+            }
+            else {
+                RUNTIME_ERR(SYNTAX_ERROR, "Operator expected!");
+            }
+
+            int priority = expr_op_get_priority(*(token_type_t*)op->ptr);
+            if (priority < 0) {
+                RUNTIME_ERR(SYNTAX_ERROR, "Invalid operator.");
+            }
+
+            if (priority == curr_priority) {
+                if (first_is_op) {
+                    // <OP> <TERM>
+                    // E.g.: + 5
+
+                    // We'll get the last term from the result list,
+                    // but if i <= 1, no item was added to result list!
+                    if (i <= 1) {
+                        RUNTIME_ERR(SYNTAX_ERROR, "A term expected! A OP B");
+                    }
+
+                    int result_last_index = result->used_length-1;
+                    expr_item_t* last_term_raw = (expr_item_t*)list_get(result, result_last_index);
+                    // Backup last item, because it'll be
+                    // overwritten with list_set
+                    expr_item_t* last_term = expr_item_create(last_term_raw->ptr, last_term_raw->type);
+
+                    List* grouped_term = create_list(sizeof(expr_item_t), 3);
+                    list_add(grouped_term, last_term);
+                    list_add(grouped_term, op);
+                    list_add(grouped_term, term);
+
+                    expr_item_t* group = expr_item_create(grouped_term, item_expr);
+                    list_set(result, result_last_index, group);
+                }
+                else {
+                    // <TERM> <OP>
+                    // Eg: 5 +
+                    if (i >= expr->used_length - 1) {
+                        RUNTIME_ERR(SYNTAX_ERROR, "B term expected! A OP B");
+                    }
+
+                    expr_item_t* next = list_get(expr, ++i);
+
+                    List* grouped_term = create_list(sizeof(expr_item_t), 3);
+                    list_add(grouped_term, term);
+                    list_add(grouped_term, op);
+                    list_add(grouped_term, next);
+
+                    expr_item_t* group = expr_item_create(grouped_term, item_expr);
+                    list_add(result, group);
+                }
+            }
+            else {
+                list_add(result, first_item);
+                list_add(result, second_item);
+            }
+
+            first_item = NULL;
+            second_item = NULL;
+        }
+      
     }
 
-    if (operation->operation == operation_sum) {
-        if (
-        value_a->type == String && 
-        value_b->type == String) {
-            result = malloc(strlen(value_a->value)+strlen(value_b->value)+1);
-            strcpy(result, value_a->value);
-            strcat(result, value_b->value);
-            result_type = String;
-        }
-        else if (
-        value_a->type == Number &&
-        value_b->type == Number) {
-            result = malloc(sizeof(double));
-            *((double*)result) = (*(double*)value_a->value) + (*(double*)value_b->value);
-            result_type = Number;
-        }
-        else if (
-        value_a->type == String &&
-        value_b->type == Number) {
-            char* num_as_str = Number_toString(*(double*)value_b->value);
-            result = malloc(strlen(value_a->value)+strlen(num_as_str)+1);
-            strcpy(result, value_a->value);
-            strcat(result, num_as_str);
-            result_type = String;
-
-            free(num_as_str);
-        }
-        else if (
-        value_a->type == Number &&
-        value_b->type == String) {
-            char* num_as_str = Number_toString(*(double*)value_a->value);
-            result = malloc(strlen(num_as_str)+strlen(value_b->value)+1);
-            strcpy(result, num_as_str);
-            strcat(result, value_b->value);
-            result_type = String;
-
-            free(num_as_str);
-        }
+    if (first_item != NULL) {
+        list_add(result, first_item);
+    }
+    if (second_item != NULL) {
+        list_add(result, second_item);
     }
 
-    return expr_value_create(result, result_type);
+    printf("Round (%d)\n\t(res) ", curr_priority);
+    expr_print_tree(result);
+    printf("\n");
 
+    return expr_mount_tree(result, curr_priority - 1);
 }
 
-variable_t* expr_eval_from_compiled(List* compiled_expr, context_t* context) {
-    
+void expr_print_linear(List *linear_expr) {
+    for (int i = 0; i < linear_expr->used_length; i++) {
+        expr_item_t *item = (expr_item_t *)list_get(linear_expr, i);
+        switch (item->type) {
+            case item_operator:
+                printf(" OP (%s) ",
+                       token_type_str[*((token_type_t *)item->ptr)]);
+                break;
+            case item_expr:
+                printf(" TREE (...) ");
+                break;
+            case item_value:
+                printf(" VALUE (%f) ", *((double *)item->ptr));
+                break;
+            default:
+                RUNTIME_ERR(TYPE_ERROR, "Unknown item type!");
+                break;
+        }
+    }
+}
+
+void expr_print_item(expr_item_t *item) {
+    if (item->type == item_value) {
+        // Let's assume it's a double by now
+        printf("%f", *((double *)item->ptr));
+    } else if (item->type == item_operator) {
+        printf("%s", token_type_str[*((token_type_t *)item->ptr)]);
+    } else if (item->type == item_expr) {
+        // So, it's a list with the terms
+        expr_print_tree((List *)item->ptr);
+    }
+
+    printf(" ");
+}
+
+void expr_print_tree(List *tree_expr) {
+    printf("[", tree_expr->used_length);
+
+    for (int i = 0; i < tree_expr->used_length; i++) {
+        printf(" ");
+
+        expr_item_t *item = (expr_item_t *)list_get(tree_expr, i);
+        expr_print_item(item);
+    }
+
+    printf("]");
 }

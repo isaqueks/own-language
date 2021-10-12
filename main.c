@@ -13,57 +13,20 @@
 
 #include "built_in_lib/defaultlib.h"
 
-void print_op(operation_t* op) {
-    printf("[");
-
-    if (op->a_is_expr_value) {
-        printf(" %f ", *((double*)((expr_value_t*)op->value_a)->value));
-    } else {
-        print_op(op->value_a);
-    }
-
-    if (op->value_b != NULL) {
-        switch(op->operation) {
-            case operation_sum:
-                printf("+");
-                break;
-            case operation_sub:
-                printf("-");
-                break;
-            case operation_mul:
-                printf("*");
-                break;
-            case operation_div:
-                printf("/");
-                break;
-            default:
-                printf("Not implemented");
-                break;
-        }
-
-        if (op->b_is_expr_value) {
-            printf(" %f ", *((double*)((expr_value_t*)op->value_b)->value));
-        } else {
-            print_op(op->value_b);
-        }
-    }
-
-    printf("]");
-}
 
 int main(int argc, char const *argv[])
 {
 
     context_t* main = context_create(NULL);
 
-    List* tok = lexer_lex_line("5+10+5+2");
+    List* tok = lexer_lex_line("1*2*3/5");
     int out_int = 0;
-    List* ops = expr_compile(tok, main, &out_int);
-
-    for (int j = 0; j < ops->used_length; j++) {
-        operation_t* op = list_get(ops, j);
-        print_op(op);
-    }
+    List* ops = expr_parse_linear(tok, main, &out_int);
+    expr_print_linear(ops);
+    printf("mount tree\n");
+    List* tree = expr_mount_tree(ops, 1);
+    printf("tree done:\n\n");
+    expr_print_tree(tree);
     return 0;
 
 
