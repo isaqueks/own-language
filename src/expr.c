@@ -62,10 +62,6 @@ List *expr_mount_tree(List *expr, int curr_priority) {
         return expr;
     }
 
-    printf("Received ");
-    expr_print_tree(expr);
-    printf("\n");
-
     List *result = create_list(sizeof(expr_item_t), 16);
 
     expr_item_t *first_item = NULL;
@@ -117,6 +113,10 @@ List *expr_mount_tree(List *expr, int curr_priority) {
                     // Backup last item, because it'll be
                     // overwritten with list_set
                     expr_item_t* last_term = expr_item_create(last_term_raw->ptr, last_term_raw->type);
+                    // We won't call expr_item_free
+                    // because it also frees the ptr,
+                    // which is used in the backup item
+                    free(last_term_raw);
 
                     List* grouped_term = create_list(sizeof(expr_item_t), 3);
                     list_add(grouped_term, last_term);
@@ -162,10 +162,6 @@ List *expr_mount_tree(List *expr, int curr_priority) {
         list_add(result, second_item);
     }
 
-    printf("Round (%d)\n\t(res) ", curr_priority);
-    expr_print_tree(result);
-    printf("\n");
-
     return expr_mount_tree(result, curr_priority - 1);
 }
 
@@ -200,8 +196,6 @@ void expr_print_item(expr_item_t *item) {
         // So, it's a list with the terms
         expr_print_tree((List *)item->ptr);
     }
-
-    printf(" ");
 }
 
 void expr_print_tree(List *tree_expr) {
@@ -212,6 +206,8 @@ void expr_print_tree(List *tree_expr) {
 
         expr_item_t *item = (expr_item_t *)list_get(tree_expr, i);
         expr_print_item(item);
+
+        printf(" ");
     }
 
     printf("]");

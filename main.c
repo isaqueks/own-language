@@ -41,8 +41,9 @@ int main(int argc, char const *argv[])
         size_t read;
         printf("File >> %s\n", argv[1]);
         fp = fopen(argv[1], "r");
-        if (fp == NULL)
+        if (fp == NULL) {
             exit(EXIT_FAILURE);
+        }
 
         while ((read = getline(&line, &len, fp)) != -1) {
             parser_parse(parser_state, line, main);
