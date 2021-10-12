@@ -302,6 +302,7 @@ List *lexer_define_tokens(List *prelexed_tokens)
                 token_type_t stype = SymbolTypes[index];
                 token->type = stype;
                 if (stype == open_parenthesis &&
+                i > 0 &&
                 GET_PREV_TOKEN()->type == var_name &&
                 strchr(legal_name_start, GET_PREV_TOKEN()->token[0]) != NULL)
                 {
