@@ -1,1 +1,1 @@
-while 10+5-2
+var x: Number = 10+5+3;

@@ -3,8 +3,6 @@
 #include "errors.h"
 #include "primtypes.h";
 
-#define MAX_OP_PRIORITY 1
-
 int expr_op_get_priority(token_type_t op_type) {
     if (op_type == operation_sub || op_type == operation_sum) {
         return 0;
@@ -16,6 +14,9 @@ int expr_op_get_priority(token_type_t op_type) {
 
 expr_item_t *expr_item_create(void *item_src, expr_item_type_t type, variable_type_t val_type) {
     expr_item_t *item = (expr_item_t *)malloc(sizeof(expr_item_t));
+    if (type < 0 || type > 2) {
+        RUNTIME_ERR(TYPE_ERROR, "Unknown type!");
+    }
     item->ptr = item_src;
     item->type = type;
     item->value_type = val_type;
@@ -27,11 +28,11 @@ void expr_item_free(expr_item_t *expr) {
     free(expr);
 }
 
-List *expr_parse_linear(List *tokens, context_t *context, int *out_i, int opened_parenthesis) {
+List *expr_parse_linear(List *tokens, context_t *context, int *out_i, int opened_parenthesis, int max_i) {
     List *result = create_list(sizeof(expr_item_t), 16);
     int i = *out_i;
 
-    for (; i < tokens->used_length; i++) {
+    for (; i < tokens->used_length && (max_i <= 0 || i <= max_i); i++) {
         token_t *token = (token_t *)list_get(tokens, i);
         expr_item_t *item = expr_item_create(NULL, item_value, Any);
 
@@ -60,12 +61,13 @@ List *expr_parse_linear(List *tokens, context_t *context, int *out_i, int opened
                    token->type == operation_mul ||
                    token->type == operation_div) {
             item->type = item_operator;
-            item->ptr = malloc(sizeof(token_type_t));
-            *((token_type_t *)item->ptr) = token->type;
+            token_type_t* token_type_ptr = malloc(sizeof(token_type_t));
+            *token_type_ptr = token->type;
+            item->ptr = (void*)token_type_ptr;
         } 
         else if (token->type == open_parenthesis) {
             *out_i = i+1;
-            List* linear_inside_parenthesis = expr_parse_linear(tokens, context, out_i, 1);
+            List* linear_inside_parenthesis = expr_parse_linear(tokens, context, out_i, 1, max_i);
             i = (*out_i);
             List* tree = expr_mount_tree(linear_inside_parenthesis, MAX_OP_PRIORITY);
             expr_item_free(item);
@@ -77,7 +79,7 @@ List *expr_parse_linear(List *tokens, context_t *context, int *out_i, int opened
             list_free(tree);
             continue;
         }
-        else if (token->type == close_parenthesis) {
+        else if (token->type <= close_parenthesis) {
             opened_parenthesis--;
             // Not used
             // TODO: Only alloc if needed
@@ -132,6 +134,10 @@ List *expr_mount_tree(List *expr, int curr_priority) {
             }
             else {
                 RUNTIME_ERR(SYNTAX_ERROR, "Operator expected!");
+            }
+
+            if (term->type != item_expr && term->type != item_value) {
+                RUNTIME_ERR(SYNTAX_ERROR, "Value or expr expected");
             }
 
             int priority = expr_op_get_priority(*(token_type_t*)op->ptr);
@@ -250,10 +256,14 @@ void expr_print_item(expr_item_t *item) {
         // So, it's a list with the terms
         expr_print_tree((List *)item->ptr);
     }
+    else {
+        printf("Type: %d\n", item->type);
+        RUNTIME_ERR(TYPE_ERROR, "Unknown expr_item type.");
+    }
 }
 
 void expr_print_tree(List *tree_expr) {
-    printf("[", tree_expr->used_length);
+    printf("[");
 
     for (int i = 0; i < tree_expr->used_length; i++) {
         printf(" ");

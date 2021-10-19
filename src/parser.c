@@ -14,6 +14,7 @@
 #include "lexer.h"
 #include "primtypes.h"
 #include "variable.h"
+#include "expr.h"
 
 #define NEXT_TOKEN()                                   \
     {                                                  \
@@ -78,280 +79,104 @@ bool parser_remove_state_if_mine(List *state,
     }
 }
 
-int parser_eval_expr_until_tokens(List *state, List *tokens, context_t *context,
-                                  variable_type_t type, int i,
-                                  token_type_t limits[], int limitscount,
-                                  void **out, int *size,
-                                  variable_type_t *out_type) {
-    bool isString = false;
-
-    void *output = NULL;
-    int outSize = 0;
-
-    bool operation_time = false;
-    token_type_t operation;
-
-    for (; i < tokens->used_length; i++) {
-        token_t *token = list_get(tokens, i);
-        BREAK_IF_LINE_END();
-
-        bool brk = false;
-        for (int j = 0; j < limitscount; j++) {
-            if (token->type == limits[j] && token->type != UNKNOWN) {
-                brk = true;
-                break;
-            }
-        }
-        if (brk) break;
-
-        variable_type_t token_type_as_var_type;
-
-        bool shouldContinue = false;
-        switch (token->type) {
-            case operation_sum:
-                operation = operation_sum;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case operation_sub:
-                operation = operation_sub;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case operation_mul:
-                operation = operation_mul;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case operation_div:
-                operation = operation_div;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case cond_equal:
-                operation = cond_equal;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case cond_higher:
-                operation = cond_higher;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case cond_higher_or_equal:
-                operation = cond_higher_or_equal;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case cond_less:
-                operation = cond_less;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case cond_less_or_equal:
-                operation = cond_less_or_equal;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case cond_not_equal:
-                operation = cond_not_equal;
-                operation_time = true;
-                shouldContinue = true;
-                break;
-            case number:
-                token_type_as_var_type = Number;
-                break;
-            case string_literal:
-                token_type_as_var_type = String;
-                break;
-            case var_name:
-                token_type_as_var_type = -1;
-                break;
-            // TODO: Add other types
-            default:
-                ERR(SYNTAX_ERROR, "Constant value or variable expected.");
-                break;
-        }
-        if (shouldContinue) {
-            shouldContinue = false;
-            continue;
-        }
-
-        char *value = token->token;
-        // A number can be represented in string
-        bool value_is_string_representation = true;
-
-        if (token_type_as_var_type == -1) {
-            variable_t *var = context_search_variable(context, token->token);
-            token_type_as_var_type = var->type;
-            value = (char *)(variable_get_value(var));
-            if (token_type_as_var_type != String)
-                value_is_string_representation = false;
-        }
-
-        if (token_type_as_var_type != type && type != Any &&
-            token_type_as_var_type != Any) {
-            ERR(TYPE_ERROR, "Type conflict.");
-        }
-
-        if (output == NULL) {
-            if (type == Any) {
-                type = token_type_as_var_type;
-            }
-
-            switch (type) {
-                case Number:
-                    outSize = sizeof(double);
-                    break;
-
-                case String:
-                    outSize = strlen(value) + 1;
-                    break;
-
-                default:
-                    Throw("NOT_IMPLEMENTED");
-                    break;
-            }
-            output = malloc(outSize);
-        } else {
-            switch (type) {
-                case Number:
-                    // Same size, no changes
-                    outSize = sizeof(double);
-                    break;
-
-                case String:
-                    outSize += strlen(value);
-                    break;
-
-                default:
-                    Throw("NOT_IMPLEMENTED");
-                    break;
-            }
-            output = realloc(output, outSize);
-        }
-
-        if (operation_time) {
-            double *out_as_double_ptr = ((double *)output);
-#define STR2NUM(x) \
-    (value_is_string_representation ? String_toNumber(x) : *((double *)(x)))
-
-            if (operation == operation_sum) {
-                if (type == String) {
-                    outSize += strlen(value);
-                    strcat((char *)output, value);
-                } else if (type == Number) {
-                    double val = STR2NUM(value);
-                    *out_as_double_ptr += STR2NUM(value);
-                }
-            }
-            if (operation == operation_sub) {
-                if (type == String) {
-                    ERR(TYPE_ERROR, "Cannot subtract strings!");
-                } else if (type == Number) {
-                    *out_as_double_ptr -= STR2NUM(value);
-                }
-            }
-            if (operation == operation_mul) {
-                if (type == String) {
-                    ERR(TYPE_ERROR, "Cannot multiply strings!");
-                } else if (type == Number) {
-                    *out_as_double_ptr *= STR2NUM(value);
-                }
-            }
-            if (operation == operation_div) {
-                if (type == String) {
-                    ERR(TYPE_ERROR, "Cannot divide strings!");
-                } else if (type == Number) {
-                    *out_as_double_ptr /= STR2NUM(value);
-                }
-            }
-            if (operation == cond_equal || operation == cond_not_equal ||
-                operation == cond_higher || operation == cond_higher_or_equal ||
-                operation == cond_less || operation == cond_less_or_equal) {
-                int boolValue = false;
-                if (type == String) {
-                    switch (operation) {
-                        case cond_equal:
-                            boolValue = (strcmp(output, value) == 0);
-                            break;
-                        case cond_not_equal:
-                            boolValue = (strcmp(output, value) != 0);
-                            break;
-                        case cond_higher:
-                            boolValue = strlen(output) > strlen(value);
-                            break;
-                        case cond_higher_or_equal:
-                            boolValue = strlen(output) >= strlen(value);
-                            break;
-                        case cond_less:
-                            boolValue = strlen(output) < strlen(value);
-                            break;
-                        case cond_less_or_equal:
-                            boolValue = strlen(output) <= strlen(value);
-                            break;
-                    }
-                } else if (type == Number) {
-                    switch (operation) {
-                        case cond_equal:
-                            boolValue = (*out_as_double_ptr == STR2NUM(value));
-                            break;
-                        case cond_not_equal:
-                            boolValue = (*out_as_double_ptr != STR2NUM(value));
-                            break;
-                        case cond_higher:
-                            boolValue = (*out_as_double_ptr > STR2NUM(value));
-                            break;
-                        case cond_higher_or_equal:
-                            boolValue = (*out_as_double_ptr >= STR2NUM(value));
-                            break;
-                        case cond_less:
-                            boolValue = (*out_as_double_ptr < STR2NUM(value));
-                            break;
-                        case cond_less_or_equal:
-                            boolValue = (*out_as_double_ptr <= STR2NUM(value));
-                            break;
-                    }
-                }
-                outSize = sizeof(double);
-                *out_as_double_ptr = boolValue;
-                type = Number;
-            }
-
-            operation_time = false;
-            continue;
-        } else {
-            // This code will run on firt iteration
-            // It will initialize output
-            if (type == Number) {
-                double real_number_value = 0;
-
-                if (value_is_string_representation)
-                    real_number_value = String_toNumber(value);
-                else
-                    real_number_value = *((double *)value);
-
-                double *dptr = (double *)output;
-                *dptr = real_number_value;
-            } else if (type == String) {
-                strcpy((char *)output, value);
-            }
-        }
+void* parser_eval_expr_item(expr_item_t* item, int* size, variable_type_t* type) {
+    if (item->type == item_expr) {
+        return parser_eval_compiled_expr(item->ptr, size, type);
     }
+    else if (item->type == item_value) {
+        // For now, let's consider just double
+        // TODO: Implement arithmetitc for other types
+        *size = sizeof(double);
+        *type = item->value_type;
+        void* mem = malloc(*size);
+        memcpy(mem, item->ptr, *size);
+        return mem;
+    }
+    else {
+        RUNTIME_ERR(TYPE_ERROR, "Could not evaluate non value expr type!");
+    }
+}
 
-    *out_type = type;
-    *size = outSize;
-    *out = output;
-    return i;
-#undef STR2NUM
+void* parser_eval_compiled_expr(List* tree, int *size, variable_type_t* out_type) {
+
+    *out_type = Number;
+
+    expr_item_t *op = NULL, *b = NULL;
+
+    void* mem = parser_eval_expr_item(list_get(tree, 0), size, out_type);
+    #define mem_as_double ((double*)mem)
+
+    for (int j = 1; j < tree->used_length; j++) {
+        expr_item_t* item = (expr_item_t*)list_get(tree, j);
+
+        if (op == NULL) {
+            op = item;
+        }
+        else if (b == NULL) {
+            b = item;
+
+            if (op->type != item_operator) {
+                RUNTIME_ERR(TYPE_ERROR, "Term should be an operator!");
+            }
+            else if (b->type == item_operator) {
+                RUNTIME_ERR(TYPE_ERROR, "Term should not be an operator!");
+            }
+
+            // Let's consider just sum for now
+            
+            variable_type_t b_type;
+            int b_size;
+
+            double* b_value = parser_eval_expr_item(b, &b_size, &b_type);
+
+            *mem_as_double += *b_value;
+
+            op = NULL;
+            b = NULL;
+        }
+
+    }
+    
+    #undef mem_as_double
+    return mem;
 }
 
 int parser_eval_expr(List *state, List *tokens, context_t *context,
                      variable_type_t type, int i, void **out, int *size,
-                     variable_type_t *out_type) {
-    token_type_t limits[] = {UNKNOWN};
-    return parser_eval_expr_until_tokens(state, tokens, context, type, i,
-                                         limits, 1, out, size, out_type);
+                     variable_type_t *out_type
+) {
+    
+    // TODO: Read and eval the expr
+    // First: let's search for the limit
+
+    int start_i = i;
+    int opened_parenthesis = 0;
+
+    for (; i < tokens->used_length; i++) {
+        token_t* token = (token_t*)list_get(tokens, i);
+        
+        if (token->type == open_parenthesis)  {
+            opened_parenthesis++;
+        }
+        else if (token->type == close_parenthesis) {
+            opened_parenthesis--;
+            if (opened_parenthesis == 0) {
+                break;
+            }
+        }
+        else if (token->type == comma && opened_parenthesis == 0) {
+            break;
+        }
+
+    }    
+
+    int out_i = start_i;
+    List* expr = expr_parse_linear(tokens, context, &out_i, 0, i-1);
+    List* tree = expr_mount_tree(expr, MAX_OP_PRIORITY);
+
+    *out = parser_eval_compiled_expr(tree, size, out_type);
+
+    return i;
 }
 
 void parser_parse(List *state, char *line, context_t *context) {
@@ -478,12 +303,14 @@ int parser_call_function(List *state, List *tokens, context_t *context, int i) {
 
         variable_type_t expr_type;
         token_type_t toks[] = {comma, close_parenthesis};
-        i = parser_eval_expr_until_tokens(state, tokens, context, model->type,
-                                          i, toks, 2, &value, &value_size,
-                                          &expr_type);
+        RUNTIME_ERR(MEMORY_ERROR, "Not impl");
+        // TODO: Uncomment and fix
+        // i = parser_eval_expr_until_tokens(state, tokens, context, model->type,
+        //                                   i, toks, 2, &value, &value_size,
+        //                                   &expr_type);
 
-        variable_t *arg = variable_create(vname, expr_type, value, value_size);
-        context_add_variable(function_scope, arg);
+        // variable_t *arg = variable_create(vname, expr_type, value, value_size);
+        // context_add_variable(function_scope, arg);
     }
 
     parser_function_invoke(state, function, function_scope);
@@ -635,7 +462,7 @@ int parser_read_block(List *tokens, context_t *context, int i, List **out_block,
 
     NEXT_TOKEN();
 
-read_tokens:;
+    read_tokens:;
     while (true) {
         if (token->type == open_bracket) {
             opened_brackets++;
@@ -685,7 +512,7 @@ int parser_read_block_save_state(List *state, List *tokens, context_t *context,
         }
     }
 
-read_until_open_bracket:;
+    read_until_open_bracket:;
     {
         parser_set_state(state, read_block_states, 2,
                          &STATE(block_awaiting_start, opened_brackets, block));
@@ -714,7 +541,7 @@ read_until_open_bracket:;
         }
     }
 
-read_until_end:;
+    read_until_end:;
     {
         parser_set_state(state, read_block_states, 2,
                          &STATE(block_awaiting_end, opened_brackets, block));

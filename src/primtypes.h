@@ -7,28 +7,37 @@
     /* String */
     /* "Math" operations */
 
-// Concatenates two strings
-// ! Uses malloc()
-char* String_sum(char* a, char* b);
+void String_sum_String(char* a, char* b, char** output);
+void String_subtract_String(char* a, char* b, char** output);
+void String_multiply_String(char* a, char* b, char** output);
+
+void String_sum_Number(char* a, double* b, char** output);
+void String_subtract_Number(char* a, double* b, char** output);
+void String_multiplty_Number(char* a, double* b, char** output);
+
     /* Methods */
 
 // Converts a string two a Number type (double)
-double String_toNumber(char* str);
+void String_toNumber(char* str, double* output);
 
 
     /* Number */
     /* Math operations */
 
 
-double Number_sum(double a, double b);
-double Number_subtract(double a, double b);
-double Number_multiply(double a, double b);
-double Number_divide(double a, double b);
+void Number_sum_Number(double* a, double* b, double* output);
+void Number_subtract_Number(double* a, double* b, double* output);
+void Number_multiply_Number(double* a, double* b, double* output);
+void Number_divide_Number(double* a, double* b, double* output);
+
+void Number_sum_String(double* a, char* b, char** output);
+void Number_subtract_String(double* a, char* b, char** output);
+void Number_multiply_String(double* a, char* b, char** output);
 
     /* Methods */
 
 // Converts a number to string
 // ! Memory will be allocated!
-char* Number_toString(double number);
+void Number_toString(double* number, char** output);
 
 #endif

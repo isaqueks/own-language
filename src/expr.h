@@ -8,6 +8,8 @@
 #include "context.h"
 #include "primtypes.h"
 
+#define MAX_OP_PRIORITY 1
+
 typedef enum {
 
     item_operator,
@@ -27,9 +29,10 @@ typedef struct {
 expr_item_t* expr_item_create(void* item_src, expr_item_type_t type, variable_type_t val_type);
 void expr_item_free(expr_item_t* expr);
 
-List* expr_parse_linear(List* tokens, context_t* context, int* out_i, int opened_parenthesis);
+List* expr_parse_linear(List* tokens, context_t* context, int* out_i, int opened_parenthesis, int max_i);
 List* expr_mount_tree(List* expr, int curr_priority);
 
+void expr_print_item(expr_item_t *item);
 void expr_print_linear(List* linear_expr);
 void expr_print_tree(List* tree_expr);
 

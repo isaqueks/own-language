@@ -19,16 +19,16 @@ int main(int argc, char const *argv[])
 
     context_t* main = context_create(NULL);
 
-    List* tok = lexer_lex_line("(((1+2)*(3/5))");
+    // List* tok = lexer_lex_line("10+5+3");
 
-    int out_int = 0;
-    List* ops = expr_parse_linear(tok, main, &out_int, 0);
-    expr_print_linear(ops);
-    printf("mount tree\n");
-    List* tree = expr_mount_tree(ops, 1);
-    printf("tree done:\n\n");
-    expr_print_tree(tree);
-    return 0;
+    // int out_int = 0;
+    // List* ops = expr_parse_linear(tok, main, &out_int, 0, 0);
+    // expr_print_linear(ops);
+    // printf("mount tree\n");
+    // List* tree = expr_mount_tree(ops, 1);
+    // printf("tree done:\n\n");
+    // expr_print_tree(tree);
+    // return 0;
 
 
     lib_install(main);

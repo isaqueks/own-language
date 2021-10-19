@@ -36,8 +36,10 @@ void parser_parse_tokens(List* state, List* tokens, context_t* context);
 
 void parser_function_invoke(List* state, function_t* function, context_t* context);
 
-int parser_eval_expr_until_tokens(List* state, List* tokens, context_t* context,
-    variable_type_t type, int i, token_type_t limits[], int limitscount, void** out, int* size, variable_type_t* out_type);
+void* parser_eval_compiled_expr(List* tree, int *size, variable_type_t* out_type);
+
+// int parser_eval_expr_until_tokens(List* state, List* tokens, context_t* context,
+//     variable_type_t type, int i, token_type_t limits[], int limitscount, void** out, int* size, variable_type_t* out_type);
 
 int parser_eval_expr(List* state, List* tokens, context_t* context,
     variable_type_t type, int i, void** out, int* size, variable_type_t* out_type);
