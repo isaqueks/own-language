@@ -15,6 +15,7 @@
 #include "primtypes.h"
 #include "variable.h"
 #include "expr.h"
+#include "operations.h"
 
 #define NEXT_TOKEN()                                   \
     {                                                  \
@@ -79,17 +80,34 @@ bool parser_remove_state_if_mine(List *state,
     }
 }
 
-void* parser_eval_expr_item(expr_item_t* item, int* size, variable_type_t* type) {
+void* parser_eval_expr_item(expr_item_t* item, int* out_size, variable_type_t* type) {
     if (item->type == item_expr) {
-        return parser_eval_compiled_expr(item->ptr, size, type);
+        return parser_eval_compiled_expr(item->ptr, out_size, type);
     }
     else if (item->type == item_value) {
         // For now, let's consider just double
         // TODO: Implement arithmetitc for other types
-        *size = sizeof(double);
+
         *type = item->value_type;
-        void* mem = malloc(*size);
-        memcpy(mem, item->ptr, *size);
+        void* mem;
+
+        switch (item->value_type)
+        {
+        case Number:
+            *out_size = sizeof(double);
+            break;
+
+        case String:
+            *out_size = strlen(item->ptr)+1;
+            break;
+        
+        default:
+            Throw("Type not implemented");
+            break;
+        }
+
+        mem = malloc(*out_size);
+        memcpy(mem, item->ptr, *out_size);
         return mem;
     }
     else {
@@ -97,14 +115,13 @@ void* parser_eval_expr_item(expr_item_t* item, int* size, variable_type_t* type)
     }
 }
 
-void* parser_eval_compiled_expr(List* tree, int *size, variable_type_t* out_type) {
+void* parser_eval_compiled_expr(List* tree, int* out_size, variable_type_t* out_type) {
 
-    *out_type = Number;
+    // *out_type = Number;
 
     expr_item_t *op = NULL, *b = NULL;
 
-    void* mem = parser_eval_expr_item(list_get(tree, 0), size, out_type);
-    #define mem_as_double ((double*)mem)
+    void* mem = parser_eval_expr_item(list_get(tree, 0), out_size, out_type);
 
     for (int j = 1; j < tree->used_length; j++) {
         expr_item_t* item = (expr_item_t*)list_get(tree, j);
@@ -127,9 +144,26 @@ void* parser_eval_compiled_expr(List* tree, int *size, variable_type_t* out_type
             variable_type_t b_type;
             int b_size;
 
-            double* b_value = parser_eval_expr_item(b, &b_size, &b_type);
+            void* b_value = parser_eval_expr_item(b, &b_size, &b_type);
 
-            *mem_as_double += *b_value;
+            // b = b_value,
+            // a = mem
+
+            void* a = mem;
+
+            if (*out_type == String) {
+                mem = &mem;
+            }
+
+            operation_calculate(
+                (*(token_type_t*)op->ptr), 
+                *out_type, 
+                b_type, 
+                a, 
+                b_value,
+                out_type,
+                mem
+            );
 
             op = NULL;
             b = NULL;
@@ -137,12 +171,11 @@ void* parser_eval_compiled_expr(List* tree, int *size, variable_type_t* out_type
 
     }
     
-    #undef mem_as_double
     return mem;
 }
 
 int parser_eval_expr(List *state, List *tokens, context_t *context,
-                     variable_type_t type, int i, void **out, int *size,
+                     variable_type_t type, int i, void **out, int* size,
                      variable_type_t *out_type
 ) {
     
@@ -218,7 +251,7 @@ int parser_internal_assign_variable(List *state, List *tokens,
     if (var->type == Any) {
         var->type = outtype;
     }
-
+    
     if (var->value_pointer != NULL) variable_free_value(var);
     variable_assign(var, valuemem, size);
 
@@ -302,15 +335,14 @@ int parser_call_function(List *state, List *tokens, context_t *context, int i) {
         strcpy(vname, model->name);
 
         variable_type_t expr_type;
-        token_type_t toks[] = {comma, close_parenthesis};
-        RUNTIME_ERR(MEMORY_ERROR, "Not impl");
-        // TODO: Uncomment and fix
-        // i = parser_eval_expr_until_tokens(state, tokens, context, model->type,
-        //                                   i, toks, 2, &value, &value_size,
-        //                                   &expr_type);
+        i = parser_eval_expr(
+            state, tokens, context,
+            model->type, i, &value, &value_size,
+            &expr_type
+        );
 
-        // variable_t *arg = variable_create(vname, expr_type, value, value_size);
-        // context_add_variable(function_scope, arg);
+        variable_t *arg = variable_create(vname, expr_type, value, value_size);
+        context_add_variable(function_scope, arg);
     }
 
     parser_function_invoke(state, function, function_scope);

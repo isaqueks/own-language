@@ -39,7 +39,7 @@ List *expr_parse_linear(List *tokens, context_t *context, int *out_i, int opened
         if (token->type == number) {
             item->type = item_value;
             double *value = (double *)malloc(sizeof(double));
-            *value = String_toNumber(token->token);
+            String_toNumber(token->token, value);
             item->ptr = (void *)value;
             item->value_type = Number;
         } 
