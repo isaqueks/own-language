@@ -55,7 +55,15 @@ void String_subtract_Number(char* a, double* b, char** output) {
 }
 
 void String_multiplty_Number(char* a, double* b, char** output) {
-    RUNTIME_ERR(TODO_ERROR, "Not implemented");
+    int len = strlen(a) * (*b) + 1;
+    char* out = malloc(len);
+    out[0] = 0x00;
+
+    for (int i = 0; i < *b; i++) {
+        strcat(out, a);
+    }
+
+    *output = out;
 }
 
 /* Methods */
@@ -98,7 +106,7 @@ void Number_subtract_String(double* a, char* b, char** output) {
 }
 
 void Number_multiply_String(double* a, char* b, char** output) {
-    RUNTIME_ERR(TODO_ERROR, "Not implemented");
+    String_multiplty_Number(b, a, output);
 }
 
 /* Methods */

@@ -18,6 +18,12 @@ type_operation_t type_operation_list[] = {
     // Multiplication
     // Number * Number = Number
     { operation_mul, Number, Number, Number, (type_operation_func)Number_multiply_Number },
+    // Number * String = String
+    { operation_mul, Number, String, String, (type_operation_func)Number_multiply_String },
+    // String * Number = String
+    { operation_mul, String, Number, String, (type_operation_func)String_multiplty_Number },
+    // String * String = String
+    { operation_mul, String, String, String, (type_operation_func)String_multiply_String },
 };
 
 void operation_calculate(
@@ -39,6 +45,16 @@ void operation_calculate(
             op->a_type == a_type && 
             op->b_type == b_type
         ) {
+            *output_type = op->output_type;
+            // if (a_type == String) {
+            //     a = &a;
+            // }
+            // if (b_type == String) {
+            //     b = &b;
+            // }
+            // if (op->output_type == String) {
+            //     output = &output;
+            // }
             op->calculate(a, b, output);
             return;
         }

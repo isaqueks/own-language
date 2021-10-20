@@ -1,2 +1,4 @@
-print("Hello " + "World");
-print((10+(0.5*2)));
+function strcat(a: String, b: String) { 
+    print(a + " " + b);
+}
+strcat("Hello", "World");

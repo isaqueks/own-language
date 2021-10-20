@@ -1,4 +1,5 @@
-function Test(X: String, Z: Number) {
+function Test(X: String, Z: Number)
+{
 	print("Starting!")
 	print(X)
 	function J {

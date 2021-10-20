@@ -151,7 +151,7 @@ void* parser_eval_compiled_expr(List* tree, int* out_size, variable_type_t* out_
 
             void* a = mem;
 
-            if (*out_type == String) {
+            if (*out_type == String || b_type == String) {
                 mem = &mem;
             }
 
@@ -164,6 +164,7 @@ void* parser_eval_compiled_expr(List* tree, int* out_size, variable_type_t* out_
                 out_type,
                 mem
             );
+
 
             op = NULL;
             b = NULL;
@@ -443,7 +444,9 @@ int parser_create_function(List *state, List *tokens, context_t *context,
     }
 
 function_create:;
-    { func = function_create_empty(fname, arglist); }
+    { 
+        func = function_create_empty(fname, arglist);
+    }
 
 function_read_code:;
     {
@@ -452,6 +455,7 @@ function_read_code:;
         int output_status = 0;
         i = parser_read_block_save_state(state, tokens, context, i,
                                          func->tokens, &output_status);
+
         if (output_status < 0) {
             return i;
         }
@@ -467,7 +471,7 @@ function_submit:;
 }
 
 int parser_read_block(List *tokens, context_t *context, int i, List **out_block,
-                      int **out_opened_brackets) {
+                      int *out_opened_brackets) {
     // List of tokens
     List *block = *out_block;
 
