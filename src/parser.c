@@ -180,7 +180,6 @@ int parser_eval_expr(List *state, List *tokens, context_t *context,
                      variable_type_t *out_type
 ) {
     
-    // TODO: Read and eval the expr
     // First: let's search for the limit
 
     int start_i = i;
@@ -201,7 +200,9 @@ int parser_eval_expr(List *state, List *tokens, context_t *context,
         else if (token->type == comma && opened_parenthesis == 0) {
             break;
         }
-
+        else if (token->type == line_end && opened_parenthesis == 0) {
+            break;
+        }
     }    
 
     int out_i = start_i;
@@ -243,7 +244,7 @@ int parser_internal_assign_variable(List *state, List *tokens,
     // Next should be a literal value, or a var name
     NEXT_TOKEN();
 
-    char *valuemem;
+    void* valuemem;
     int size;
 
     variable_type_t outtype;
@@ -252,8 +253,13 @@ int parser_internal_assign_variable(List *state, List *tokens,
     if (var->type == Any) {
         var->type = outtype;
     }
+    else if (var->type != outtype) {
+        RUNTIME_ERR(TYPE_ERROR, "Cannot change variable type!");    
+    }
     
-    if (var->value_pointer != NULL) variable_free_value(var);
+    if (var->value_pointer != NULL) { 
+        variable_free_value(var);
+    }
     variable_assign(var, valuemem, size);
 
     return i;
@@ -702,13 +708,13 @@ eval_condition:;
 #define SUCCESS 0
 
 void parser_parse_tokens(List *state, List *tokens, context_t *context) {
-    // * Token debug -- Not needed anymore
-    // for (int i = 0; i < tokens->used_length; i++)
-    // {
-    //     token_t *token = list_get(tokens, i);
-    //     printf(" [\"%s\":%s] \n", token->token, token_type_str[token->type]);
-    // }
-    // printf("\n");
+
+        // for (int i = 0; i < tokens->used_length; i++)
+        // {
+        //     token_t *token = list_get(tokens, i);
+        //     printf(" [\"%s\":%s] \n", token->token, token_type_str[token->type]);
+        // }
+        // printf("\n");
 
     int i = 0;
 
@@ -739,6 +745,8 @@ void parser_parse_tokens(List *state, List *tokens, context_t *context) {
 
     for (; i < tokens->used_length; i++) {
         token_t *token = list_get(tokens, i);
+
+        // printf(" [\"%s\":%s] \n", token->token, token_type_str[token->type]);
 
         if (token->type == line_end) {
             continue;

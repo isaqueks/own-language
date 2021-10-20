@@ -1,4 +1,6 @@
-function strcat(a: String, b: String) { 
-    print(a + " " + b);
+function printTimes(str: String, times: Number)
+{ 
+str = "shit";
+print(str * times);
 }
-strcat("Hello", "World");
+printTimes("Hello", 10);

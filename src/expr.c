@@ -133,6 +133,7 @@ List *expr_mount_tree(List *expr, int curr_priority) {
                 term = first_item;
             }
             else {
+                expr_print_tree(expr);
                 RUNTIME_ERR(SYNTAX_ERROR, "Operator expected!");
             }
 
